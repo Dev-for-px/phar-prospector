@@ -60,11 +60,15 @@
     var membros = e.membros || [], dono = membros.filter(function (m) { return m.papel === 'dono'; })[0] || membros[0];
     var semConfirmar = membros.filter(function (m) { return !m.email_confirmado; }).length;
     var acesso = e.ultimo_acesso ? 'Último acesso: ' + PP.dataHora(e.ultimo_acesso) : 'Ninguém entrou ainda';
+    var doc = PP.docLimpo(e.documento), local = [e.cidade, e.uf].filter(Boolean).join('/');
+    var cadastro = [doc ? (doc.length === 11 ? 'CPF ' : 'CNPJ ') + PP.docFormatado(doc) : '', local, e.telefone].filter(Boolean).join(' · ');
     var nomes = membros.map(function (m) { return (m.nome || m.email) + (m.papel === 'dono' ? ' (responsável)' : ''); }).join(', ');
     return el('div', { class: 'adm-linha', role: 'listitem' },
       el('div', { class: 'a-nome' },
         el('div', { class: 'nome', text: e.nome }),
-        dono ? el('div', { class: 'sub', text: dono.email }) : el('div', { class: 'sub', text: 'Sem usuários' })),
+        dono ? el('div', { class: 'sub', text: dono.email }) : el('div', { class: 'sub', text: 'Sem usuários' }),
+        cadastro ? el('div', { class: 'sub', text: cadastro }) : null,
+        e.completo ? null : el('div', { class: 'sub adm-falta', text: 'Cadastro incompleto' })),
       el('div', { class: 'a-email' },
         el('div', { class: 'adm-membros', text: membros.length ? (membros.length === 1 ? '1 usuário: ' : membros.length + ' usuários: ') + nomes : 'Nenhum usuário' }),
         e.convites ? el('div', { class: 'sub', text: e.convites + (e.convites === 1 ? ' e-mail autorizado sem cadastro' : ' e-mails autorizados sem cadastro') }) : null,
@@ -101,7 +105,7 @@
     var vis = st.empresas.filter(function (e) {
       if (st.filtro && e.status !== st.filtro) return false;
       if (!q) return true;
-      var alvo = [e.nome].concat((e.membros || []).map(function (m) { return m.nome + ' ' + m.email; })).join(' ');
+      var alvo = [e.nome, e.razao_social, e.documento, PP.docFormatado(e.documento), e.cidade, e.uf, e.segmento, e.telefone].concat((e.membros || []).map(function (m) { return m.nome + ' ' + m.email; })).join(' ');
       return semAcento(alvo).indexOf(q) !== -1;
     });
     var filtrando = !!(st.filtro || q), todas = st.empresas.length;
@@ -122,7 +126,7 @@
     var btn = $('btn-backup'); btn.disabled = true;
     sb.rpc('admin_exportar').then(function (r) {
       var empresas = checar(r) || [];
-      var cols = [['Empresa (conta)', null], ['Contato: empresa', 'empresa'], ['Pessoa', 'contato'], ['Cargo', 'cargo'], ['Telefone', 'telefone'], ['E-mail', 'email'],
+      var cols = [['Empresa (conta)', null], ['CNPJ ou CPF (conta)', '#doc'], ['Contato: empresa', 'empresa'], ['Pessoa', 'contato'], ['Cargo', 'cargo'], ['Telefone', 'telefone'], ['E-mail', 'email'],
         ['Cidade', 'cidade'], ['UF', 'uf'], ['Segmento', 'segmento'], ['Porte', 'porte'], ['Origem', 'origem'], ['Site ou Instagram', 'link'], ['Interesse', 'interesse'],
         ['Status', 'status'], ['Último contato', 'ultimo_contato'], ['Próximo contato', 'proximo_contato'], ['Observações', 'observacoes'], ['Histórico', 'historico'],
         ['Cadastrado por', 'cadastrado_por'], ['Cadastrado em', 'criado_em']];
@@ -137,6 +141,7 @@
           total++;
           linhas.push(cols.map(function (c) {
             if (!c[1]) return cel(e.nome);
+            if (c[1] === '#doc') return cel(PP.docFormatado((e.cadastro || {}).documento));
             var v = x[c[1]];
             if (c[1] === 'historico') v = (v || []).map(function (h) { return [h.data, h.canal, h.nota].filter(Boolean).join(' - '); }).join(' | ');
             return cel(v);

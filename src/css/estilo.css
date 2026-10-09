@@ -360,3 +360,14 @@ section.suave{background:var(--surface-soft)}
 .tag-papel{background:var(--surface-tint);color:var(--ink);margin-left:8px;vertical-align:2px}
 .adm-membros{font-size:14px;line-height:20px;color:var(--ink-muted);overflow-wrap:anywhere}
 .secao-adm{margin-bottom:48px}
+
+/* ---------- cadastro da empresa ---------- */
+.form-empresa{display:flex;flex-direction:column;gap:40px;max-width:820px}
+.bloco-form{border-top:1px solid var(--line-strong);padding-top:16px;display:flex;flex-direction:column;gap:16px}
+.bloco-form h2{font-size:20px;line-height:28px;font-weight:600}
+.campo input:disabled,.campo select:disabled,.campo textarea:disabled{background:var(--surface-soft);color:var(--ink-muted);border-color:var(--line)}
+.aviso-info{background:var(--accent-soft);color:var(--ink);display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin:0 0 24px}
+.aviso-info p{min-width:0;flex:1 1 280px}
+.aviso-info strong{font-weight:600}
+.campo [aria-invalid="true"]{border-color:var(--danger)}
+.adm-falta{color:var(--warning);font-weight:500}

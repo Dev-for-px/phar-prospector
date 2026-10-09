@@ -113,25 +113,33 @@ function fazerBackup() {
     aba.getRange(1, 1, 1, COLUNAS.length).setFontWeight('bold');
     aba.setFrozenRows(1);
     totalContatos += linhas.length - 1;
+    var cad = emp.cadastro || {};
+    var endereco = [cad.logradouro, cad.numero, cad.complemento, cad.bairro].filter(function (v) { return v; }).join(', ');
     resumo.push([emp.nome, emp.status, (emp.usuarios || []).length, linhas.length - 1,
-      (emp.usuarios || []).map(function (u) { return u.nome + ' <' + u.email + '>'; }).join(', ')]);
+      (emp.usuarios || []).map(function (u) { return u.nome + ' <' + u.email + '>'; }).join(', '),
+      cad.documento || '', cad.razao_social || '', cad.segmento || '', cad.telefone || '', cad.email || '',
+      cad.site || '', cad.instagram || '', endereco, cad.cep || '', cad.cidade || '', cad.uf || '']);
   });
 
   var abaResumo = planilha.getSheetByName('Resumo') || planilha.insertSheet('Resumo', 0);
   abaResumo.clearContents();
   var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+  var titulos = ['Empresa', 'Situação', 'Usuários', 'Contatos', 'Quem usa', 'CNPJ ou CPF', 'Razão social', 'Ramo', 'Telefone', 'E-mail',
+    'Site', 'Instagram', 'Endereço', 'CEP', 'Cidade', 'UF'];
+  var largura = titulos.length;
+  function linhaResumo_(a, b) { var l = [a, b]; while (l.length < largura) l.push(''); return l; }
   var cabecalho = [
-    ['PHAR Prospector — backup', '', '', '', ''],
-    ['Último backup', agora, '', '', ''],
-    ['Empresas', empresas.length, '', '', ''],
-    ['Contatos', totalContatos, '', '', ''],
-    ['', '', '', '', ''],
-    ['Empresa', 'Situação', 'Usuários', 'Contatos', 'Quem usa']
+    linhaResumo_('PHAR Prospector — backup', ''),
+    linhaResumo_('Último backup', agora),
+    linhaResumo_('Empresas', empresas.length),
+    linhaResumo_('Contatos', totalContatos),
+    linhaResumo_('', ''),
+    titulos
   ];
   var tudo = cabecalho.concat(resumo.map(function (l) { return l.map(function (v) { return texto_(v); }); }));
-  abaResumo.getRange(1, 1, tudo.length, 5).setValues(tudo);
+  abaResumo.getRange(1, 1, tudo.length, largura).setValues(tudo);
   abaResumo.getRange(1, 1).setFontWeight('bold');
-  abaResumo.getRange(6, 1, 1, 5).setFontWeight('bold');
+  abaResumo.getRange(6, 1, 1, largura).setFontWeight('bold');
   return { empresas: empresas.length, contatos: totalContatos };
 }
 

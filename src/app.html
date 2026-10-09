@@ -57,6 +57,7 @@
         <button class="aba-app" type="button" role="tab" id="aba-painel" data-visao="painel" aria-selected="true" aria-controls="v-painel">Painel</button>
         <button class="aba-app" type="button" role="tab" id="aba-contatos" data-visao="contatos" aria-selected="false" aria-controls="v-contatos">Contatos</button>
         <button class="aba-app" type="button" role="tab" id="aba-equipe" data-visao="equipe" aria-selected="false" aria-controls="v-equipe">Equipe</button>
+        <button class="aba-app" type="button" role="tab" id="aba-empresa" data-visao="empresa" aria-selected="false" aria-controls="v-empresa">Empresa</button>
       </div>
       <div class="stats" role="group" aria-label="Filtrar por retorno">
         <button class="stat" type="button" data-filtro="atrasados" aria-pressed="false"><b id="n-atrasados">–</b><span>Atrasados</span></button>
@@ -72,6 +73,10 @@
 
     <!-- Painel -->
     <section id="v-painel" role="tabpanel" aria-labelledby="aba-painel">
+      <div class="aviso aviso-info" id="aviso-cadastro" hidden>
+        <p><strong>Complete o cadastro da empresa.</strong> Faltam dados como CNPJ, telefone e cidade.</p>
+        <button class="btn btn-sec btn-sm" type="button" id="btn-completar">Completar cadastro</button>
+      </div>
       <div id="painel-vazio" hidden></div>
       <div id="painel-conteudo" hidden>
         <div class="painel-grade">
@@ -150,17 +155,96 @@
           <p><button class="linkbtn" type="button" id="eq-copiar">Copiar o link de cadastro</button></p>
         </section>
 
-        <section id="eq-empresa" hidden>
-          <h2>Nome da empresa</h2>
-          <form class="eq-form" id="form-empresa" novalidate>
-            <div class="campo">
-              <label for="eq-nome-empresa">Como a empresa aparece no sistema</label>
-              <input type="text" id="eq-nome-empresa" maxlength="120" autocomplete="off">
-            </div>
-            <button class="btn btn-sec" type="submit" id="eq-salvar-nome">Salvar nome</button>
-          </form>
-        </section>
       </div>
+    </section>
+
+    <!-- Empresa -->
+    <section id="v-empresa" role="tabpanel" aria-labelledby="aba-empresa" hidden>
+      <form class="form-empresa" id="form-empresa" novalidate>
+        <div class="bloco-form">
+          <h2>Dados da empresa</h2>
+          <p class="dica" id="emp-dica">Estes são os dados da sua empresa no sistema. Todos os usuários da equipe podem ver; só o responsável pela conta altera.</p>
+          <div class="grid">
+            <div class="campo col-2">
+              <label for="emp-nome">Nome da empresa</label>
+              <input type="text" id="emp-nome" maxlength="120" autocomplete="organization" aria-describedby="emp-nome-dica">
+              <p class="dica" id="emp-nome-dica">É como a empresa aparece no topo do sistema.</p>
+            </div>
+            <div class="campo">
+              <label for="emp-razao_social">Razão social</label>
+              <input type="text" id="emp-razao_social" maxlength="160" autocomplete="off">
+            </div>
+            <div class="campo">
+              <label for="emp-documento">CNPJ ou CPF</label>
+              <input type="text" id="emp-documento" maxlength="20" inputmode="text" autocomplete="off" placeholder="00.000.000/0000-00">
+            </div>
+            <div class="campo">
+              <label for="emp-segmento">Ramo de atuação</label>
+              <input type="text" id="emp-segmento" maxlength="80" autocomplete="off" placeholder="Ex.: captação de recursos">
+            </div>
+            <div class="campo">
+              <label for="emp-telefone">Telefone ou WhatsApp</label>
+              <input type="tel" id="emp-telefone" maxlength="30" autocomplete="tel" placeholder="(31) 99999-0000">
+            </div>
+            <div class="campo">
+              <label for="emp-email">E-mail comercial</label>
+              <input type="email" id="emp-email" maxlength="120" autocomplete="email">
+            </div>
+            <div class="campo">
+              <label for="emp-site">Site</label>
+              <input type="text" id="emp-site" maxlength="200" autocomplete="url" placeholder="suaempresa.com.br">
+            </div>
+            <div class="campo">
+              <label for="emp-instagram">Instagram</label>
+              <input type="text" id="emp-instagram" maxlength="80" autocomplete="off" placeholder="@suaempresa">
+            </div>
+            <div class="campo col-2">
+              <label for="emp-descricao">O que a empresa faz</label>
+              <textarea id="emp-descricao" maxlength="500" placeholder="Uma ou duas frases sobre o negócio"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="bloco-form">
+          <h2>Endereço</h2>
+          <div class="grid">
+            <div class="campo">
+              <label for="emp-cep">CEP</label>
+              <input type="text" id="emp-cep" maxlength="9" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000">
+            </div>
+            <div class="campo">
+              <label for="emp-logradouro">Rua ou avenida</label>
+              <input type="text" id="emp-logradouro" maxlength="160" autocomplete="address-line1">
+            </div>
+            <div class="campo">
+              <label for="emp-numero">Número</label>
+              <input type="text" id="emp-numero" maxlength="20" autocomplete="off">
+            </div>
+            <div class="campo">
+              <label for="emp-complemento">Complemento</label>
+              <input type="text" id="emp-complemento" maxlength="80" autocomplete="address-line2" placeholder="Sala, andar, loja">
+            </div>
+            <div class="campo">
+              <label for="emp-bairro">Bairro</label>
+              <input type="text" id="emp-bairro" maxlength="80" autocomplete="off">
+            </div>
+            <div class="campo">
+              <label for="emp-cidade">Cidade</label>
+              <input type="text" id="emp-cidade" maxlength="80" autocomplete="address-level2">
+            </div>
+            <div class="campo">
+              <label for="emp-uf">Estado</label>
+              <select id="emp-uf" autocomplete="address-level1"><option value="">—</option><option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option><option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option><option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option><option>SE</option><option>TO</option></select>
+            </div>
+          </div>
+        </div>
+
+        <p class="erro" id="emp-erro" role="alert" hidden></p>
+        <div class="acoes" id="emp-acoes">
+          <button class="btn btn-primary" type="submit" id="emp-salvar">Salvar dados</button>
+          <span class="dica" id="emp-atualizado"></span>
+        </div>
+      </form>
     </section>
   </main>
 </div>

@@ -1,4 +1,4 @@
-// O sistema: painel com gráficos, lista de contatos, registro de conversas e equipe.
+// O sistema: painel com gráficos, lista de contatos, registro de conversas, equipe e cadastro da empresa.
 // Só abre para quem tem login em uma empresa ativa. Todos os usuários da empresa veem a mesma lista.
 (function () {
   'use strict';
@@ -18,13 +18,14 @@
   ];
   var UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
   var CAMPOS_TEXTO = ['empresa', 'contato', 'cargo', 'telefone', 'email', 'cidade', 'uf', 'segmento', 'porte', 'origem', 'link', 'interesse'];
-  var VISOES = ['painel', 'contatos', 'equipe'];
+  var VISOES = ['painel', 'contatos', 'equipe', 'empresa'];
+  var CAMPOS_EMP = ['nome', 'razao_social', 'documento', 'segmento', 'telefone', 'email', 'site', 'instagram', 'descricao', 'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf'];
 
   var st = {
     items: [], modo: 'carregando', visao: 'painel', filtro: 'todos', q: '', status: '', ordem: 'proximo',
     editId: null, logId: null, intTocado: false,
     usuario: null, empresa: null, simulando: false,
-    equipe: null, nomes: {}, removendo: ''
+    equipe: null, nomes: {}, removendo: '', cadastro: null, cadastroErro: false
   };
   var colator = new Intl.Collator('pt-BR', { sensitivity: 'base' });
 
@@ -161,6 +162,7 @@
   // ---------- painel ----------
   function renderPainel(hj) {
     var caixaVazia = $('painel-vazio'), conteudo = $('painel-conteudo');
+    $('aviso-cadastro').hidden = !(podeEditarEmpresa() && st.cadastro && !cadastroCompleto(st.cadastro));
     caixaVazia.replaceChildren();
     if (st.modo !== 'ok' || !st.items.length) {
       conteudo.hidden = true; caixaVazia.hidden = false;
@@ -208,6 +210,7 @@
     });
     if (st.visao === 'painel') { renderPainel(hj); return; }
     if (st.visao === 'equipe') { renderEquipe(); return; }
+    if (st.visao === 'empresa') return;
 
     lista.replaceChildren();
     lista.removeAttribute('role');
@@ -430,7 +433,6 @@
         acoes));
     });
     $('eq-gerenciar').hidden = !eq.pode_gerenciar;
-    $('eq-empresa').hidden = !eq.pode_gerenciar;
     if (eq.convites.length) {
       convites.append(el('p', { class: 'dica', text: 'Autorizados, aguardando o cadastro:' }));
       eq.convites.forEach(function (c) {
@@ -459,14 +461,63 @@
     }).catch(function (e) { err.textContent = erroEquipe(e); err.hidden = false; })
       .then(function () { btn.disabled = false; });
   }
-  function renomearEmpresa(ev) {
+  // ---------- cadastro da empresa ----------
+  var ERROS_EMP = {
+    nome_invalido: 'Informe o nome da empresa.',
+    documento_invalido: 'Confira o CNPJ ou CPF: o número não é válido.',
+    cep_invalido: 'O CEP precisa ter 8 números.',
+    uf_invalida: 'Escolha o estado na lista.',
+    email_invalido: 'Confira o e-mail comercial.',
+    sem_permissao: 'Só o responsável pela conta pode alterar os dados da empresa.'
+  };
+  function podeEditarEmpresa() { return !!st.usuario && (st.usuario.papel === 'dono' || st.simulando); }
+  function cadastroCompleto(c) { return !!(c && c.nome && c.documento && c.telefone && c.cidade && c.uf); }
+  function preencherEmpresa() {
+    var c = st.cadastro || { nome: st.empresa ? st.empresa.nome : '' }, pode = podeEditarEmpresa() && !st.cadastroErro;
+    CAMPOS_EMP.forEach(function (k) {
+      var campo = $('emp-' + k), v = c[k] || '';
+      if (k === 'documento') v = PP.docFormatado(v); else if (k === 'cep') v = PP.cepFormatado(v);
+      campo.value = v; campo.disabled = !pode; campo.removeAttribute('aria-invalid');
+    });
+    $('emp-acoes').hidden = !pode;
+    $('emp-erro').hidden = true;
+    $('emp-dica').textContent = st.cadastroErro
+      ? 'Não deu para carregar os dados da empresa. Recarregue a página.'
+      : pode ? 'Preencha os dados completos da empresa. Toda a equipe pode ver; só o responsável pela conta altera.'
+        : 'Estes são os dados da empresa. Só o responsável pela conta pode alterar.';
+    $('emp-atualizado').textContent = c.dados_em ? 'Atualizado em ' + PP.dataHora(c.dados_em) : '';
+  }
+  function carregarEmpresa() {
+    return sb.from('empresas').select('*').maybeSingle().then(function (r) {
+      st.cadastro = checar(r) || null; st.cadastroErro = !st.cadastro;
+    }).catch(function () { st.cadastroErro = true; })
+      .then(function () { preencherEmpresa(); if (st.visao === 'painel') render(); });
+  }
+  function salvarEmpresa(ev) {
     ev.preventDefault();
-    var nome = $('eq-nome-empresa').value.trim(), btn = $('eq-salvar-nome');
-    if (!nome) { toast(ERROS_EQUIPE.nome_invalido); return; }
-    btn.disabled = true;
-    sb.rpc('empresa_renomear', { p_nome: nome }).then(function (r) {
-      checar(r); st.empresa.nome = nome; $('topo-empresa').textContent = nome; $('simulando-nome').textContent = nome; toast('Nome da empresa atualizado');
-    }).catch(function (e) { toast(erroEquipe(e)); }).then(function () { btn.disabled = false; });
+    var dados = {}, err = $('emp-erro'), btn = $('emp-salvar'), ruim = '';
+    CAMPOS_EMP.forEach(function (k) { dados[k] = $('emp-' + k).value.trim(); $('emp-' + k).removeAttribute('aria-invalid'); });
+    dados.documento = PP.docLimpo(dados.documento);
+    dados.cep = dados.cep.replace(/\D/g, '');
+    dados.email = dados.email.toLowerCase();
+    if (!dados.nome) ruim = 'nome';
+    else if (dados.documento && !PP.docValido(dados.documento)) ruim = 'documento';
+    else if (dados.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dados.email)) ruim = 'email';
+    else if (dados.cep && dados.cep.length !== 8) ruim = 'cep';
+    if (ruim) {
+      err.textContent = ERROS_EMP[{ nome: 'nome_invalido', documento: 'documento_invalido', email: 'email_invalido', cep: 'cep_invalido' }[ruim]];
+      err.hidden = false; $('emp-' + ruim).setAttribute('aria-invalid', 'true'); $('emp-' + ruim).focus(); return;
+    }
+    err.hidden = true; btn.disabled = true;
+    sb.rpc('empresa_salvar', { p: dados }).then(function (r) {
+      checar(r);
+      st.cadastro = Object.assign({}, st.cadastro || {}, dados, { dados_em: new Date().toISOString() });
+      st.empresa.nome = dados.nome; $('topo-empresa').textContent = dados.nome; $('simulando-nome').textContent = dados.nome;
+      preencherEmpresa();
+      toast(cadastroCompleto(st.cadastro) ? 'Dados da empresa salvos' : 'Dados salvos. Ainda faltam CNPJ ou CPF, telefone, cidade ou estado.');
+    }).catch(function (e) {
+      err.textContent = ERROS_EMP[(e && e.message) || ''] || 'Não deu para salvar agora. Confira sua conexão e tente de novo.'; err.hidden = false;
+    }).then(function () { btn.disabled = false; });
   }
   function copiarLink() {
     var link = window.location.origin + '/entrar?modo=criar';
@@ -512,10 +563,9 @@
         $('link-admin').hidden = !u.is_admin;
         $('faixa-simulando').hidden = !st.simulando;
         $('simulando-nome').textContent = emp.nome;
-        $('eq-nome-empresa').value = emp.nome;
         var inicial = (window.location.hash || '').replace('#', '');
         st.visao = VISOES.indexOf(inicial) === -1 ? 'painel' : inicial;
-        tela('app'); iniciarLista(); carregarEquipe();
+        tela('app'); preencherEmpresa(); iniciarLista(); carregarEquipe(); carregarEmpresa();
       });
     }).catch(function () {
       estado('Não deu para carregar', 'Confira sua conexão e tente de novo.', true);
@@ -571,7 +621,10 @@
   $('l-proximo').addEventListener('input', resumoLog);
 
   $('form-convite').addEventListener('submit', convidar);
-  $('form-empresa').addEventListener('submit', renomearEmpresa);
+  $('form-empresa').addEventListener('submit', salvarEmpresa);
+  $('emp-documento').addEventListener('blur', function () { this.value = PP.docFormatado(this.value); });
+  $('emp-cep').addEventListener('blur', function () { this.value = PP.cepFormatado(this.value); });
+  $('btn-completar').addEventListener('click', function () { irVisao('empresa'); });
   $('eq-copiar').addEventListener('click', copiarLink);
 
   sb.auth.onAuthStateChange(function (evento) { if (evento === 'SIGNED_OUT') PP.irPara('/entrar'); });
