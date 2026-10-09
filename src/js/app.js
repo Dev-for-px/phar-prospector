@@ -21,11 +21,26 @@
   var VISOES = ['painel', 'contatos', 'equipe', 'empresa'];
   var CAMPOS_EMP = ['nome', 'razao_social', 'documento', 'segmento', 'telefone', 'email', 'site', 'instagram', 'descricao', 'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf'];
 
+  // permissões que o responsável marca para cada colaborador (as mesmas chaves do banco)
+  var PERMS = [
+    { grupo: 'O que pode ver', itens: [
+      ['ver_painel', 'Painel com os gráficos'],
+      ['ver_todos', 'Contatos de toda a equipe', 'Desmarcado: vê só os contatos que ela mesma cadastrou.'],
+      ['ver_equipe', 'Quem faz parte da equipe'],
+      ['ver_empresa', 'Dados da empresa (CNPJ, endereço)']] },
+    { grupo: 'O que pode fazer', itens: [
+      ['criar', 'Cadastrar contatos'],
+      ['editar', 'Editar contatos e registrar conversas'],
+      ['excluir', 'Excluir contatos'],
+      ['exportar', 'Baixar a planilha de contatos (CSV)']] }
+  ];
+  var PERM_PADRAO = { ver_painel: true, ver_todos: true, ver_equipe: true, ver_empresa: true, criar: true, editar: true, excluir: false, exportar: false };
+
   var st = {
     items: [], modo: 'carregando', visao: 'painel', filtro: 'todos', q: '', status: '', ordem: 'proximo',
     editId: null, logId: null, intTocado: false,
     usuario: null, empresa: null, simulando: false,
-    equipe: null, nomes: {}, removendo: '', cadastro: null, cadastroErro: false
+    equipe: null, nomes: {}, removendo: '', editandoPerm: '', cadastro: null, cadastroErro: false, perm: {}
   };
   var colator = new Intl.Collator('pt-BR', { sensitivity: 'base' });
 
@@ -57,12 +72,13 @@
   }
   function msgErro(e) {
     var c = e && e.code, s = e && e.status;
-    if (c === '42501') return 'Esta conta não está ativa para gravar. Saia e entre de novo; se continuar, fale com a PHAR.';
+    if (c === '42501') return 'Você não tem permissão para isso, ou a conta não está ativa. Fale com o responsável pela conta.';
     if (c === 'P0001') return 'A empresa chegou ao limite de contatos. Exclua contatos antigos para salvar novos.';
     if (c === '23514') return 'Algum campo passou do tamanho permitido. Encurte o texto e tente de novo.';
     if (s === 401 || c === 'PGRST301') return 'Sua sessão expirou. Entre de novo.';
     return 'Não deu para salvar agora. Confira sua conexão e tente de novo.';
   }
+  function pode(k) { return st.perm[k] !== false; }
   function checar(r) { if (r.error) { r.error.status = r.status; throw r.error; } return r.data; }
 
   // ---------- banco: conversão e chamadas ----------
@@ -150,7 +166,7 @@
       el('div', { class: 'c-status' }, el('span', { class: 'tag s-' + s.id, text: s.curto || s.nome, title: s.nome })),
       celProximo(p, hj),
       el('div', { class: 'c-acao' },
-        el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Registrar contato', onclick: function () { abrirLog(p.id); } })));
+        pode('editar') ? el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Registrar contato', onclick: function () { abrirLog(p.id); } }) : null));
   }
 
   function vazio(titulo, texto, botao, acao) {
@@ -168,7 +184,7 @@
       conteudo.hidden = true; caixaVazia.hidden = false;
       if (st.modo === 'carregando') caixaVazia.append(el('p', { class: 'dica', text: 'Carregando o painel…' }));
       else if (st.modo === 'erro') caixaVazia.append(vazio('Não deu para carregar', 'Confira sua conexão e tente de novo.', 'Tentar de novo', iniciarLista));
-      else caixaVazia.append(vazio('Comece pelo primeiro contato', 'Anote quem você abordou, o status e quando voltar a falar. Os gráficos aparecem aqui assim que houver contatos.', 'Novo contato', function () { abrirFicha(null); }));
+      else caixaVazia.append(vazio('Comece pelo primeiro contato', 'Anote quem você abordou, o status e quando voltar a falar. Os gráficos aparecem aqui assim que houver contatos.', pode('criar') ? 'Novo contato' : '', function () { abrirFicha(null); }));
       return;
     }
     caixaVazia.hidden = true; conteudo.hidden = false;
@@ -202,10 +218,12 @@
     var pronto = st.modo === 'ok';
     ['atrasados', 'hoje', 'semana', 'sem'].forEach(function (k) { $('n-' + k).textContent = pronto ? n[k] : '–'; });
     document.querySelectorAll('.stat').forEach(function (b) { b.setAttribute('aria-pressed', String(st.visao === 'contatos' && b.dataset.filtro === st.filtro)); });
-    $('btn-csv').hidden = !(pronto && st.items.length);
+    $('btn-csv').hidden = !(pronto && st.items.length && pode('exportar'));
+    $('dica-proprios').hidden = pode('ver_todos');
 
     VISOES.forEach(function (v) {
       $('v-' + v).hidden = st.visao !== v;
+      $('aba-' + v).hidden = !visaoLiberada(v);
       $('aba-' + v).setAttribute('aria-selected', String(st.visao === v));
     });
     if (st.visao === 'painel') { renderPainel(hj); return; }
@@ -223,7 +241,9 @@
     }
     if (!st.items.length) {
       $('contagem').textContent = 'Nenhum contato cadastrado';
-      lista.append(vazio('Comece pelo primeiro contato', 'Anote quem você abordou, o status e quando voltar a falar. No dia marcado, o contato aparece no topo.', 'Novo contato', function () { abrirFicha(null); }));
+      lista.append(pode('criar')
+        ? vazio('Comece pelo primeiro contato', 'Anote quem você abordou, o status e quando voltar a falar. No dia marcado, o contato aparece no topo.', 'Novo contato', function () { abrirFicha(null); })
+        : vazio('Nenhum contato para mostrar', 'Quando houver contatos liberados para você, eles aparecem aqui.', '', null));
       return;
     }
     var vis = visiveis(hj), filtrando = st.filtro !== 'todos' || st.status || st.q.trim();
@@ -236,8 +256,12 @@
     vis.forEach(function (p) { lista.append(linha(p, hj)); });
   }
   function limpar() { st.filtro = 'todos'; st.status = ''; st.q = ''; $('q').value = ''; $('filtro-status').value = ''; render(); }
+  function visaoLiberada(v) {
+    return v === 'contatos' || (v === 'painel' && pode('ver_painel')) || (v === 'equipe' && pode('ver_equipe')) || (v === 'empresa' && pode('ver_empresa'));
+  }
+  function visaoInicial(v) { return VISOES.indexOf(v) !== -1 && visaoLiberada(v) ? v : (pode('ver_painel') ? 'painel' : 'contatos'); }
   function irVisao(v) {
-    st.visao = VISOES.indexOf(v) === -1 ? 'painel' : v;
+    st.visao = visaoInicial(v);
     try { history.replaceState(null, '', st.visao === 'painel' ? window.location.pathname : '#' + st.visao); } catch (e) { /* sem histórico */ }
     if (st.visao === 'equipe' && !st.equipe) carregarEquipe();
     render();
@@ -258,10 +282,13 @@
     $('f-proximo').value = p && parse(p.proximoContato) ? p.proximoContato : '';
     $('f-obs').value = p ? p.observacoes || '' : '';
     resumoFicha();
+    var leitura = !!p && !pode('editar');
+    $('form-ficha').querySelectorAll('.dlg-body input, .dlg-body select, .dlg-body textarea, #f-atalhos button').forEach(function (c) { c.disabled = leitura; });
     $('ficha-erro').hidden = true;
-    $('ficha-excluir').hidden = !p;
+    $('ficha-excluir').hidden = !p || !pode('excluir');
     $('ficha-confirma').hidden = true;
-    $('ficha-registrar').hidden = !p;
+    $('ficha-registrar').hidden = !p || leitura;
+    $('ficha-salvar').hidden = leitura;
     $('ficha-salvar').disabled = false;
 
     var rap = $('ficha-rapido'); rap.replaceChildren();
@@ -288,6 +315,7 @@
   function salvarFicha(ev) {
     ev.preventDefault();
     var err = $('ficha-erro'), d = {}, prox = $('f-proximo').value;
+    if (st.editId ? !pode('editar') : !pode('criar')) return;
     CAMPOS_TEXTO.forEach(function (k) { d[k] = $('f-' + k).value.trim(); });
     if (!d.empresa && !d.contato) { err.textContent = 'Preencha a empresa ou a pessoa de contato.'; err.hidden = false; $('f-empresa').focus(); return; }
     d.status = $('f-status').value;
@@ -333,7 +361,7 @@
     resumoLog();
   }
   function abrirLog(id) {
-    var p = achar(id); if (!p) return;
+    var p = achar(id); if (!p || !pode('editar')) return;
     st.logId = id; st.intTocado = false;
     $('log-titulo').textContent = nomeDe(p);
     $('l-data').value = hoje();
@@ -411,34 +439,91 @@
       if (st.visao === 'equipe') renderEquipe();
     }).catch(function () { st.equipe = st.equipe || { membros: [], convites: [], pode_gerenciar: false, erro: true }; if (st.visao === 'equipe') renderEquipe(); });
   }
+  // caixinhas de permissão: devolve o bloco pronto; ler com lerPermissoes(bloco)
+  function caixasPermissao(prefixo, valores) {
+    var v = valores || PERM_PADRAO;
+    return el('div', { class: 'perms' }, PERMS.map(function (g) {
+      return el('fieldset', null, el('legend', { text: g.grupo }), g.itens.map(function (it) {
+        var caixa = el('input', { type: 'checkbox', id: prefixo + '-' + it[0], 'data-perm': it[0] });
+        caixa.checked = v[it[0]] !== false && (v[it[0]] === true || PERM_PADRAO[it[0]]);
+        return el('label', { class: 'caixa', for: prefixo + '-' + it[0] }, caixa,
+          el('span', null, it[1], it[2] ? el('small', { text: it[2] }) : null));
+      }));
+    }));
+  }
+  function lerPermissoes(bloco) {
+    var p = {};
+    bloco.querySelectorAll('input[data-perm]').forEach(function (c) { p[c.dataset.perm] = c.checked; });
+    return p;
+  }
+  function resumoPermissoes(v) {
+    var ve = [], faz = [];
+    if (!v) return '';
+    ve.push(v.ver_todos ? 'os contatos de toda a equipe' : 'só os contatos que cadastrou');
+    if (v.ver_painel) ve.push('o painel');
+    if (v.ver_equipe) ve.push('a equipe');
+    if (v.ver_empresa) ve.push('os dados da empresa');
+    if (v.criar) faz.push('cadastrar');
+    if (v.editar) faz.push('editar');
+    if (v.excluir) faz.push('excluir');
+    if (v.exportar) faz.push('baixar a planilha');
+    function lista(a) { return a.length > 1 ? a.slice(0, -1).join(', ') + ' e ' + a[a.length - 1] : a[0]; }
+    return 'Vê ' + lista(ve) + '. ' + (faz.length ? 'Pode ' + lista(faz) + '.' : 'Não altera nada.');
+  }
+  function editorPermissoes(chave, valores, salvar) {
+    var bloco = caixasPermissao('perm-' + chave, valores), btn;
+    btn = el('button', { class: 'btn btn-primary btn-sm', type: 'button', text: 'Salvar permissões', onclick: function () {
+      btn.disabled = true;
+      salvar(lerPermissoes(bloco)).then(function (r) { checar(r); st.editandoPerm = ''; toast('Permissões atualizadas'); return carregarEquipe(); })
+        .catch(function (e) { toast(erroEquipe(e)); btn.disabled = false; });
+    } });
+    return el('div', { class: 'eq-editor' }, bloco,
+      el('div', { class: 'acoes' }, btn,
+        el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Cancelar', onclick: function () { st.editandoPerm = ''; renderEquipe(); } })));
+  }
   function renderEquipe() {
     var membros = $('eq-membros'), convites = $('eq-convites'), eq = st.equipe;
     membros.replaceChildren(); convites.replaceChildren();
     if (!eq) { membros.append(el('p', { class: 'dica', text: 'Carregando a equipe…' })); return; }
     if (eq.erro) { membros.append(el('p', { class: 'erro', text: 'Não deu para carregar a equipe. Recarregue a página.' })); return; }
     eq.membros.forEach(function (m) {
-      var eu = st.usuario && m.id === st.usuario.id, acoes = null;
-      if (eq.pode_gerenciar && !eu && m.papel !== 'dono') {
+      var eu = st.usuario && m.id === st.usuario.id, acoes = null, editando = st.editandoPerm === 'm' + m.id;
+      var gerenciavel = eq.pode_gerenciar && !eu && m.papel !== 'dono';
+      if (gerenciavel) {
         acoes = st.removendo === m.id
           ? el('div', { class: 'eq-acoes' }, el('span', { text: 'Tirar o acesso?' }),
               el('button', { class: 'btn btn-danger btn-sm', type: 'button', text: 'Sim, remover', onclick: function () { remover(m); } }),
               el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Manter', onclick: function () { st.removendo = ''; renderEquipe(); } }))
-          : el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Remover', onclick: function () { st.removendo = m.id; renderEquipe(); } });
+          : el('div', { class: 'eq-acoes' },
+              el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Permissões', 'aria-expanded': String(editando), onclick: function () { st.editandoPerm = editando ? '' : 'm' + m.id; renderEquipe(); } }),
+              el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Remover', onclick: function () { st.removendo = m.id; renderEquipe(); } }));
       }
       membros.append(el('div', { class: 'eq-linha' },
         el('div', null,
           el('div', { class: 'nome' }, m.nome || 'Sem nome', eu ? ' (você)' : '',
             el('span', { class: 'tag tag-papel', text: m.papel === 'dono' ? 'Responsável' : 'Colaborador' })),
-          el('div', { class: 'sub', text: m.email + (m.ultimo_acesso ? ' · último acesso em ' + PP.dataHora(m.ultimo_acesso) : ' · ainda não entrou') })),
-        acoes));
+          el('div', { class: 'sub', text: m.email + (m.ultimo_acesso ? ' · último acesso em ' + PP.dataHora(m.ultimo_acesso) : ' · ainda não entrou') }),
+          m.papel === 'dono' ? (eq.pode_gerenciar ? el('div', { class: 'eq-perm-resumo', text: 'Vê e pode tudo.' }) : null)
+            : m.permissoes ? el('div', { class: 'eq-perm-resumo', text: resumoPermissoes(m.permissoes) }) : null),
+        acoes,
+        gerenciavel && editando ? editorPermissoes('m' + m.id, m.permissoes, function (p) { return sb.rpc('equipe_permissoes', { p_permissoes: p, p_usuario: m.id }); }) : null));
     });
     $('eq-gerenciar').hidden = !eq.pode_gerenciar;
+    $('eq-dica').textContent = eq.pode_gerenciar
+      ? 'Você define o que cada pessoa pode ver e fazer. Clique em Permissões para mudar.'
+      : 'O responsável pela conta define o que cada pessoa pode ver e fazer.';
+    if (eq.pode_gerenciar && !$('eq-perms-novo').childNodes.length) $('eq-perms-novo').append(caixasPermissao('novo', eq.padrao));
     if (eq.convites.length) {
       convites.append(el('p', { class: 'dica', text: 'Autorizados, aguardando o cadastro:' }));
       eq.convites.forEach(function (c) {
+        var editando = st.editandoPerm === 'c' + c.id;
         convites.append(el('div', { class: 'eq-linha' },
-          el('div', null, el('div', { class: 'sub', text: c.email }), el('div', { class: 'sub', text: 'Autorizado em ' + PP.dataHora(c.criado_em) })),
-          el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Cancelar', onclick: function () { cancelarConvite(c); } })));
+          el('div', null, el('div', { class: 'sub', text: c.email }), el('div', { class: 'sub', text: 'Autorizado em ' + PP.dataHora(c.criado_em) }),
+            c.permissoes ? el('div', { class: 'eq-perm-resumo', text: resumoPermissoes(c.permissoes) }) : null),
+          el('div', { class: 'eq-acoes' },
+            el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Permissões', 'aria-expanded': String(editando), onclick: function () { st.editandoPerm = editando ? '' : 'c' + c.id; renderEquipe(); } }),
+            el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Cancelar autorização', onclick: function () { cancelarConvite(c); } })),
+          editando ? editorPermissoes('c' + c.id, c.permissoes, function (p) { return sb.rpc('equipe_permissoes', { p_permissoes: p, p_convite: c.id }); }) : null));
       });
     }
   }
@@ -456,8 +541,8 @@
     var email = $('eq-email').value.trim().toLowerCase(), err = $('eq-erro'), btn = $('eq-convidar');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = ERROS_EQUIPE.email_invalido; err.hidden = false; return; }
     err.hidden = true; btn.disabled = true;
-    sb.rpc('equipe_convidar', { p_email: email }).then(function (r) {
-      checar(r); $('eq-email').value = ''; toast('E-mail autorizado. Peça para a pessoa criar a conta.'); return carregarEquipe();
+    sb.rpc('equipe_autorizar', { p_email: email, p_permissoes: lerPermissoes($('eq-perms-novo')) }).then(function (r) {
+      checar(r); $('eq-email').value = ''; $('eq-perms-novo').replaceChildren(); toast('E-mail autorizado. Peça para a pessoa criar a conta.'); return carregarEquipe();
     }).catch(function (e) { err.textContent = erroEquipe(e); err.hidden = false; })
       .then(function () { btn.disabled = false; });
   }
@@ -557,15 +642,17 @@
           estado('Aguardando liberação', (primeiro ? primeiro + ', recebemos' : 'Recebemos') + ' o cadastro da ' + emp.nome + '. Assim que a conta for liberada, você entra direto no sistema por esta página.', true);
           return;
         }
-        st.usuario = u; st.empresa = emp; st.simulando = !!ses.simulando;
+        st.usuario = u; st.empresa = emp; st.simulando = !!ses.simulando; st.perm = ses.permissoes || {};
+        $('btn-novo').hidden = !pode('criar');
         $('topo-empresa').textContent = emp.nome;
         $('topo-nome').textContent = u.nome || u.email || '';
         $('link-admin').hidden = !u.is_admin;
         $('faixa-simulando').hidden = !st.simulando;
         $('simulando-nome').textContent = emp.nome;
         var inicial = (window.location.hash || '').replace('#', '');
-        st.visao = VISOES.indexOf(inicial) === -1 ? 'painel' : inicial;
-        tela('app'); preencherEmpresa(); iniciarLista(); carregarEquipe(); carregarEmpresa();
+        st.visao = visaoInicial(inicial);
+        tela('app'); preencherEmpresa(); iniciarLista(); carregarEquipe();
+        if (pode('ver_empresa')) carregarEmpresa();
       });
     }).catch(function () {
       estado('Não deu para carregar', 'Confira sua conexão e tente de novo.', true);

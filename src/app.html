@@ -123,6 +123,7 @@
       </div>
       <div class="resumo">
         <span id="contagem">Carregando os contatos…</span>
+        <span class="dica" id="dica-proprios" hidden>Você vê só os contatos que você cadastrou.</span>
         <button class="linkbtn" type="button" id="btn-limpar" hidden>Limpar filtros</button>
       </div>
       <div class="lista-head" aria-hidden="true">
@@ -136,21 +137,22 @@
       <div class="equipe">
         <section>
           <h2>Quem usa esta conta</h2>
-          <p class="dica">Todos os usuários da empresa trabalham na mesma lista de contatos.</p>
+          <p class="dica" id="eq-dica">O responsável pela conta define o que cada pessoa pode ver e fazer.</p>
           <div id="eq-membros"></div>
         </section>
 
         <section id="eq-gerenciar" hidden>
           <h2>Adicionar colaborador</h2>
           <p class="dica">Informe o e-mail da pessoa. Depois peça para ela criar a conta na página de entrada usando esse mesmo e-mail: ela entra direto na sua equipe. O sistema não envia o convite por e-mail.</p>
-          <form class="eq-form" id="form-convite" novalidate>
+          <form class="eq-novo" id="form-convite" novalidate>
             <div class="campo">
               <label for="eq-email">E-mail do colaborador</label>
               <input type="email" id="eq-email" maxlength="120" autocomplete="off">
             </div>
-            <button class="btn btn-primary" type="submit" id="eq-convidar">Adicionar</button>
+            <div id="eq-perms-novo"></div>
+            <p class="erro" id="eq-erro" role="alert" hidden></p>
+            <div class="acoes"><button class="btn btn-primary" type="submit" id="eq-convidar">Adicionar colaborador</button></div>
           </form>
-          <p class="erro" id="eq-erro" role="alert" hidden></p>
           <div id="eq-convites"></div>
           <p><button class="linkbtn" type="button" id="eq-copiar">Copiar o link de cadastro</button></p>
         </section>

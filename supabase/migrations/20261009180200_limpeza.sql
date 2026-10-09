@@ -1,4 +1,4 @@
--- PHAR Prospector: limpeza depois da mudança para empresas. PENDENTE: precisa de confirmação no Supabase para rodar.
+-- PHAR Prospector: limpeza depois da mudança para empresas. Aplicada pelo SQL Editor do Supabase.
 -- user_id vira "quem cadastrou": se a pessoa sair do sistema, o contato continua na empresa.
 alter table public.prospects drop constraint prospects_user_id_fkey;
 alter table public.prospects alter column user_id drop not null;

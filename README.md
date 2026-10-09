@@ -41,6 +41,7 @@ backup/              script de backup para o Google Planilhas
 - Cada empresa cliente é um "projeto": todos os usuários dela veem e editam a mesma lista de contatos.
 - Quem cria a conta sem convite vira responsável (dono) de uma empresa nova, que nasce **pendente** até o administrador liberar.
 - O responsável autoriza colaboradores pelo e-mail, na aba Equipe. A pessoa cria a conta com esse e-mail e entra direto na equipe. O sistema não envia e-mail de convite.
+- Permissões por colaborador: ao adicionar alguém (ou depois, no botão Permissões), o responsável marca o que a pessoa pode ver (painel, contatos de toda a equipe ou só os próprios, equipe, dados da empresa) e fazer (cadastrar, editar, excluir, baixar planilha). As regras de contatos, equipe e dados da empresa valem no banco; "painel" e "baixar planilha" só escondem a tela e o botão.
 - Na aba Empresa, o responsável preenche o cadastro completo (razão social, CNPJ ou CPF, contatos e endereço). A equipe vê; só o responsável altera. O CNPJ e o CPF têm os dígitos conferidos na tela, e o banco confere o formato.
 - Um usuário pertence a uma empresa só.
 
