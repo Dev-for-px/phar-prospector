@@ -2,6 +2,8 @@
 
 Controle de prospecção com retorno programado: cada contato abordado, o status da conversa e o dia de voltar a falar.
 
+**Documentação completa e passo a passo de reconstrução:** [`docs/DOCUMENTACAO.md`](docs/DOCUMENTACAO.md). O banco inteiro em um arquivo só: [`supabase/schema-completo.sql`](supabase/schema-completo.sql).
+
 ## As páginas
 
 | Endereço | Arquivo | Quem acessa |
@@ -23,7 +25,10 @@ src/                 código do site (HTML, CSS e JavaScript legíveis)
   js/admin.js        painel administrativo
   js/graficos.js     gráficos do painel (rosca e linha), sem biblioteca externa
   js/grade.js        desenho da grade de pontos da marca
-supabase/migrations/ estrutura do banco (tabelas, regras e funções)
+supabase/migrations/ estrutura do banco em etapas (tabelas, regras e funções)
+supabase/schema-completo.sql  o banco inteiro em um arquivo, gerado com "npm run schema"
+docs/DOCUMENTACAO.md documentação completa e reconstrução do zero
+scripts/             utilitários (gerar o schema completo)
 build.mjs            monta a pasta dist/ e minifica o código
 vercel.json          configuração da Vercel (build e cabeçalhos de segurança)
 servidor-local.mjs   servidor para testar no computador

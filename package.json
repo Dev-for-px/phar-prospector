@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
-    "dev": "node build.mjs && node servidor-local.mjs"
+    "dev": "node build.mjs && node servidor-local.mjs",
+    "schema": "node scripts/gerar-schema.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.45.4"
