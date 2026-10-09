@@ -28,11 +28,19 @@
 </div>
 
 <div id="tela-app" hidden>
+  <div class="simulando" id="faixa-simulando" hidden>
+    <div class="wrap">
+      <p><strong>Modo simular.</strong> Você está vendo e editando como <strong id="simulando-nome"></strong>. O que fizer aqui vale para essa empresa.</p>
+      <button class="btn btn-sec btn-sm" type="button" id="btn-sair-simulacao">Sair da simulação</button>
+    </div>
+  </div>
+
   <header class="band inverse">
     <div class="wrap">
       <div class="topo">
         <a class="marca" href="/app"><span>PHAR Prospector</span><span class="ponto-marca" aria-hidden="true"></span></a>
         <div class="topo-acoes">
+          <span class="topo-empresa" id="topo-empresa"></span>
           <span class="topo-nome" id="topo-nome"></span>
           <a class="topo-link" href="/admin" id="link-admin" hidden>Painel admin</a>
           <button class="topo-link" type="button" data-sair>Sair</button>
@@ -45,6 +53,11 @@
         </div>
         <button class="btn btn-accent" type="button" id="btn-novo">Novo contato</button>
       </div>
+      <div class="abas-app" role="tablist" aria-label="Áreas do sistema">
+        <button class="aba-app" type="button" role="tab" id="aba-painel" data-visao="painel" aria-selected="true" aria-controls="v-painel">Painel</button>
+        <button class="aba-app" type="button" role="tab" id="aba-contatos" data-visao="contatos" aria-selected="false" aria-controls="v-contatos">Contatos</button>
+        <button class="aba-app" type="button" role="tab" id="aba-equipe" data-visao="equipe" aria-selected="false" aria-controls="v-equipe">Equipe</button>
+      </div>
       <div class="stats" role="group" aria-label="Filtrar por retorno">
         <button class="stat" type="button" data-filtro="atrasados" aria-pressed="false"><b id="n-atrasados">–</b><span>Atrasados</span></button>
         <button class="stat" type="button" data-filtro="hoje" aria-pressed="false"><b id="n-hoje">–</b><span>Para hoje</span></button>
@@ -55,37 +68,100 @@
   </header>
 
   <main class="wrap sistema">
-    <div class="toolbar">
-      <div class="campo busca">
-        <label for="q">Buscar</label>
-        <input type="search" id="q" placeholder="Empresa, pessoa, cidade, telefone" autocomplete="off">
-      </div>
-      <div class="campo">
-        <label for="filtro-status">Status</label>
-        <select id="filtro-status"><option value="">Todos</option></select>
-      </div>
-      <div class="campo">
-        <label for="ordem">Ordenar por</label>
-        <select id="ordem">
-          <option value="proximo">Próximo contato</option>
-          <option value="nome">Nome</option>
-          <option value="recentes">Cadastro mais recente</option>
-        </select>
-      </div>
-      <button class="btn btn-sec" type="button" id="btn-csv" hidden>Baixar planilha (CSV)</button>
-    </div>
-
     <div class="aviso aviso-erro" id="aviso-erro" role="alert" hidden></div>
 
-    <div class="resumo">
-      <span id="contagem">Carregando seus contatos…</span>
-      <button class="linkbtn" type="button" id="btn-limpar" hidden>Limpar filtros</button>
-    </div>
+    <!-- Painel -->
+    <section id="v-painel" role="tabpanel" aria-labelledby="aba-painel">
+      <div id="painel-vazio" hidden></div>
+      <div id="painel-conteudo" hidden>
+        <div class="painel-grade">
+          <div class="bloco-graf">
+            <h2>Contatos por status</h2>
+            <div id="graf-status"></div>
+          </div>
+          <div class="bloco-graf">
+            <h2>Crescimento da base</h2>
+            <p class="dica">Total de contatos cadastrados, dia a dia.</p>
+            <div id="graf-crescimento"></div>
+          </div>
+        </div>
+        <div class="bloco-lista">
+          <div class="cabeca">
+            <h2>Para falar hoje</h2>
+            <button class="linkbtn" type="button" id="btn-ver-retornos">Ver todos os contatos</button>
+          </div>
+          <div class="lista" id="lista-hoje"></div>
+        </div>
+      </div>
+    </section>
 
-    <div class="lista-head" aria-hidden="true">
-      <span>Contato</span><span>Cidade e telefone</span><span>Status</span><span>Próximo contato</span><span></span>
-    </div>
-    <div class="lista" id="lista"></div>
+    <!-- Contatos -->
+    <section id="v-contatos" role="tabpanel" aria-labelledby="aba-contatos" hidden>
+      <div class="toolbar">
+        <div class="campo busca">
+          <label for="q">Buscar</label>
+          <input type="search" id="q" placeholder="Empresa, pessoa, cidade, telefone" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="filtro-status">Status</label>
+          <select id="filtro-status"><option value="">Todos</option></select>
+        </div>
+        <div class="campo">
+          <label for="ordem">Ordenar por</label>
+          <select id="ordem">
+            <option value="proximo">Próximo contato</option>
+            <option value="nome">Nome</option>
+            <option value="recentes">Cadastro mais recente</option>
+          </select>
+        </div>
+        <button class="btn btn-sec" type="button" id="btn-csv" hidden>Baixar planilha (CSV)</button>
+      </div>
+      <div class="resumo">
+        <span id="contagem">Carregando os contatos…</span>
+        <button class="linkbtn" type="button" id="btn-limpar" hidden>Limpar filtros</button>
+      </div>
+      <div class="lista-head" aria-hidden="true">
+        <span>Contato</span><span>Cidade e telefone</span><span>Status</span><span>Próximo contato</span><span></span>
+      </div>
+      <div class="lista" id="lista"></div>
+    </section>
+
+    <!-- Equipe -->
+    <section id="v-equipe" role="tabpanel" aria-labelledby="aba-equipe" hidden>
+      <div class="equipe">
+        <section>
+          <h2>Quem usa esta conta</h2>
+          <p class="dica">Todos os usuários da empresa trabalham na mesma lista de contatos.</p>
+          <div id="eq-membros"></div>
+        </section>
+
+        <section id="eq-gerenciar" hidden>
+          <h2>Adicionar colaborador</h2>
+          <p class="dica">Informe o e-mail da pessoa. Depois peça para ela criar a conta na página de entrada usando esse mesmo e-mail: ela entra direto na sua equipe. O sistema não envia o convite por e-mail.</p>
+          <form class="eq-form" id="form-convite" novalidate>
+            <div class="campo">
+              <label for="eq-email">E-mail do colaborador</label>
+              <input type="email" id="eq-email" maxlength="120" autocomplete="off">
+            </div>
+            <button class="btn btn-primary" type="submit" id="eq-convidar">Adicionar</button>
+          </form>
+          <p class="erro" id="eq-erro" role="alert" hidden></p>
+          <div id="eq-convites"></div>
+          <p><button class="linkbtn" type="button" id="eq-copiar">Copiar o link de cadastro</button></p>
+        </section>
+
+        <section id="eq-empresa" hidden>
+          <h2>Nome da empresa</h2>
+          <form class="eq-form" id="form-empresa" novalidate>
+            <div class="campo">
+              <label for="eq-nome-empresa">Como a empresa aparece no sistema</label>
+              <input type="text" id="eq-nome-empresa" maxlength="120" autocomplete="off">
+            </div>
+            <button class="btn btn-sec" type="submit" id="eq-salvar-nome">Salvar nome</button>
+          </form>
+        </section>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -276,6 +352,7 @@
 <script src="/vendor/supabase.js"></script>
 <script src="/js/config.js"></script>
 <script src="/js/comum.js"></script>
+<script src="/js/graficos.js"></script>
 <script src="/js/app.js"></script>
 </body>
 </html>

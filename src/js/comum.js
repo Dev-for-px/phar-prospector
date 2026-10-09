@@ -67,6 +67,13 @@ window.PP = (function () {
       return r.data;
     });
   }
+  // quem sou, em que empresa estou e se é um admin simulando outra empresa
+  function sessaoApp() {
+    return sb.rpc('minha_sessao').then(function (r) {
+      if (r.error) { r.error.status = r.status; throw r.error; }
+      return r.data;
+    });
+  }
   function sair() {
     sb.auth.signOut().catch(function () {}).then(function () { window.location.href = '/'; });
   }
@@ -76,6 +83,6 @@ window.PP = (function () {
     cfg: cfg, sb: sb, hashInicial: hashInicial, $: $, el: el, toast: toast,
     iso: iso, parse: parse, hoje: hoje, somaDias: somaDias, difDias: difDias,
     dataCurta: dataCurta, dataLonga: dataLonga, dataHora: dataHora,
-    sessao: sessao, perfil: perfil, sair: sair, irPara: irPara
+    sessao: sessao, perfil: perfil, sessaoApp: sessaoApp, sair: sair, irPara: irPara
   };
 })();

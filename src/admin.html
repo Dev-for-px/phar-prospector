@@ -28,6 +28,13 @@
 </div>
 
 <div id="tela-admin" hidden>
+  <div class="simulando" id="faixa-simulando" hidden>
+    <div class="wrap">
+      <p><strong>Modo simular ligado.</strong> Em "Meus contatos" você está vendo <strong id="simulando-nome"></strong>.</p>
+      <button class="btn btn-sec btn-sm" type="button" id="btn-sair-simulacao">Sair da simulação</button>
+    </div>
+  </div>
+
   <header class="band inverse">
     <div class="wrap">
       <div class="topo">
@@ -41,36 +48,53 @@
       <div class="band-top">
         <div>
           <h1>Painel administrativo</h1>
-          <p class="band-sub">Quem tem conta, quem está esperando liberação e quanto cada um usa.</p>
+          <p class="band-sub">Todas as empresas que usam o sistema, quem está esperando liberação e quanto cada uma usa.</p>
         </div>
-        <button class="btn btn-fantasma" type="button" id="btn-atualizar">Atualizar lista</button>
+        <button class="btn btn-fantasma" type="button" id="btn-atualizar">Atualizar</button>
       </div>
-      <div class="stats" role="group" aria-label="Filtrar por situação da conta">
+      <div class="stats" role="group" aria-label="Filtrar por situação da empresa">
         <button class="stat" type="button" data-filtro="pendente" aria-pressed="false"><b id="n-pendente">–</b><span>Aguardando liberação</span></button>
-        <button class="stat" type="button" data-filtro="ativa" aria-pressed="false"><b id="n-ativa">–</b><span>Contas ativas</span></button>
-        <button class="stat" type="button" data-filtro="bloqueada" aria-pressed="false"><b id="n-bloqueada">–</b><span>Bloqueadas</span></button>
+        <button class="stat" type="button" data-filtro="ativa" aria-pressed="false"><b id="n-ativa">–</b><span>Empresas ativas</span></button>
+        <div class="stat"><b id="n-usuarios">–</b><span>Usuários</span></div>
         <div class="stat"><b id="n-contatos">–</b><span>Contatos guardados</span></div>
       </div>
     </div>
   </header>
 
   <main class="wrap sistema">
+    <div class="aviso aviso-erro" id="aviso-erro" role="alert" hidden></div>
+
+    <section class="secao-adm" aria-label="Visão geral">
+      <div class="painel-grade">
+        <div class="bloco-graf">
+          <h2>Contatos por status</h2>
+          <p class="dica">Soma de todas as empresas.</p>
+          <div id="graf-status"></div>
+        </div>
+        <div class="bloco-graf">
+          <h2>Crescimento da base</h2>
+          <p class="dica">Total de contatos guardados no sistema, dia a dia.</p>
+          <div id="graf-crescimento"></div>
+        </div>
+      </div>
+    </section>
+
     <div class="toolbar">
       <div class="campo busca">
-        <label for="q">Buscar conta</label>
-        <input type="search" id="q" placeholder="Nome, empresa ou e-mail" autocomplete="off">
+        <label for="q">Buscar empresa</label>
+        <input type="search" id="q" placeholder="Empresa, pessoa ou e-mail" autocomplete="off">
       </div>
+      <button class="btn btn-sec" type="button" id="btn-backup">Baixar backup (CSV)</button>
     </div>
-    <div class="aviso aviso-erro" id="aviso-erro" role="alert" hidden></div>
     <div class="resumo">
-      <span id="contagem">Carregando contas…</span>
+      <span id="contagem">Carregando empresas…</span>
       <button class="linkbtn" type="button" id="btn-limpar" hidden>Limpar filtros</button>
     </div>
     <div class="adm-head" aria-hidden="true">
-      <span>Conta</span><span>E-mail</span><span>Cadastro</span><span>Contatos</span><span>Situação</span><span></span>
+      <span>Empresa</span><span>Usuários</span><span>Cadastro</span><span>Contatos</span><span>Situação</span><span></span>
     </div>
     <div class="lista" id="lista"></div>
-    <p class="dica mt-24">O painel mostra a conta e a quantidade de contatos de cada cliente. O conteúdo dos contatos fica visível só para o dono da conta.</p>
+    <p class="dica mt-24">"Simular" abre o sistema como se você fosse a empresa: você vê e edita os contatos dela. Cada simulação fica registrada.</p>
   </main>
 </div>
 
@@ -78,6 +102,7 @@
 <script src="/vendor/supabase.js"></script>
 <script src="/js/config.js"></script>
 <script src="/js/comum.js"></script>
+<script src="/js/graficos.js"></script>
 <script src="/js/admin.js"></script>
 </body>
 </html>

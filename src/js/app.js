@@ -1,8 +1,8 @@
-// O sistema: lista de contatos, ficha, registro de conversas e retornos programados.
-// Só abre para quem tem login e conta ativa. Cada conta enxerga apenas os próprios contatos.
+// O sistema: painel com gráficos, lista de contatos, registro de conversas e equipe.
+// Só abre para quem tem login em uma empresa ativa. Todos os usuários da empresa veem a mesma lista.
 (function () {
   'use strict';
-  var PP = window.PP, $ = PP.$, el = PP.el, sb = PP.sb, toast = PP.toast;
+  var PP = window.PP, $ = PP.$, el = PP.el, sb = PP.sb, toast = PP.toast, G = PP.graficos;
   var parse = PP.parse, hoje = PP.hoje, somaDias = PP.somaDias, difDias = PP.difDias;
   var dataCurta = PP.dataCurta, dataLonga = PP.dataLonga;
 
@@ -10,7 +10,7 @@
     { id: 'novo',        nome: 'A contatar',             retorno: 7,    ativo: true },
     { id: 'contatado',   nome: 'Contato feito',          retorno: 7,    ativo: true },
     { id: 'conversa',    nome: 'Em conversa',            retorno: 7,    ativo: true },
-    { id: 'diagnostico', nome: 'Reunião ou diagnóstico', retorno: 7,    ativo: true },
+    { id: 'diagnostico', nome: 'Reunião ou diagnóstico', curto: 'Reunião', retorno: 7, ativo: true },
     { id: 'proposta',    nome: 'Proposta enviada',       retorno: 7,    ativo: true },
     { id: 'depois',      nome: 'Não é o momento',        retorno: 90,   ativo: true },
     { id: 'cliente',     nome: 'Fechado',                retorno: null, ativo: false },
@@ -18,8 +18,14 @@
   ];
   var UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
   var CAMPOS_TEXTO = ['empresa', 'contato', 'cargo', 'telefone', 'email', 'cidade', 'uf', 'segmento', 'porte', 'origem', 'link', 'interesse'];
+  var VISOES = ['painel', 'contatos', 'equipe'];
 
-  var st = { items: [], modo: 'carregando', filtro: 'todos', q: '', status: '', ordem: 'proximo', editId: null, logId: null, intTocado: false };
+  var st = {
+    items: [], modo: 'carregando', visao: 'painel', filtro: 'todos', q: '', status: '', ordem: 'proximo',
+    editId: null, logId: null, intTocado: false,
+    usuario: null, empresa: null, simulando: false,
+    equipe: null, nomes: {}, removendo: ''
+  };
   var colator = new Intl.Collator('pt-BR', { sensitivity: 'base' });
 
   // ---------- utilidades ----------
@@ -50,21 +56,22 @@
   }
   function msgErro(e) {
     var c = e && e.code, s = e && e.status;
-    if (c === '42501') return 'Sua conta não está ativa para gravar. Saia e entre de novo; se continuar, fale com a PHAR.';
-    if (c === 'P0001') return 'Você chegou ao limite de contatos desta conta. Exclua contatos antigos para salvar novos.';
+    if (c === '42501') return 'Esta conta não está ativa para gravar. Saia e entre de novo; se continuar, fale com a PHAR.';
+    if (c === 'P0001') return 'A empresa chegou ao limite de contatos. Exclua contatos antigos para salvar novos.';
     if (c === '23514') return 'Algum campo passou do tamanho permitido. Encurte o texto e tente de novo.';
     if (s === 401 || c === 'PGRST301') return 'Sua sessão expirou. Entre de novo.';
     return 'Não deu para salvar agora. Confira sua conexão e tente de novo.';
   }
+  function checar(r) { if (r.error) { r.error.status = r.status; throw r.error; } return r.data; }
 
   // ---------- banco: conversão e chamadas ----------
   function paraApp(r) {
     var p = { id: r.id, status: r.status, proximoContato: r.proximo_contato || '', ultimoContato: r.ultimo_contato || '',
-      observacoes: r.observacoes || '', historico: Array.isArray(r.historico) ? r.historico : [], criadoEm: r.criado_em || '' };
+      observacoes: r.observacoes || '', historico: Array.isArray(r.historico) ? r.historico : [],
+      criadoEm: r.criado_em || '', userId: r.user_id || '' };
     CAMPOS_TEXTO.forEach(function (k) { p[k] = r[k] || ''; });
     return p;
   }
-  function checar(r) { if (r.error) { r.error.status = r.status; throw r.error; } return r.data; }
   function carregar() {
     var todos = [], TAM = 1000;
     function pagina(i) {
@@ -72,14 +79,14 @@
         .range(i * TAM, i * TAM + TAM - 1).then(function (r) {
           var linhas = checar(r);
           todos = todos.concat(linhas);
-          if (linhas.length === TAM && i < 5) return pagina(i + 1);
+          if (linhas.length === TAM && i < 9) return pagina(i + 1);
           return todos.map(paraApp);
         });
     }
     return pagina(0);
   }
-  function guardar(linha) {
-    var p = paraApp(linha), i;
+  function guardar(linhaBanco) {
+    var p = paraApp(linhaBanco), i;
     for (i = 0; i < st.items.length; i++) if (st.items[i].id === p.id) { st.items[i] = p; render(); return; }
     st.items.unshift(p); render();
   }
@@ -139,7 +146,7 @@
         el('button', { class: 'nome', type: 'button', text: nomeDe(p), onclick: function () { abrirFicha(p.id); } }),
         pessoa ? el('div', { class: 'sub', text: pessoa }) : null),
       el('div', { class: 'c-local' }, local ? el('div', { class: 'sub', text: local }) : null, telNode),
-      el('div', { class: 'c-status' }, el('span', { class: 'tag s-' + s.id, text: s.nome })),
+      el('div', { class: 'c-status' }, el('span', { class: 'tag s-' + s.id, text: s.curto || s.nome, title: s.nome })),
       celProximo(p, hj),
       el('div', { class: 'c-acao' },
         el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Registrar contato', onclick: function () { abrirLog(p.id); } })));
@@ -151,6 +158,38 @@
       botao ? el('button', { class: 'btn btn-primary', type: 'button', text: botao, onclick: acao }) : null);
   }
 
+  // ---------- painel ----------
+  function renderPainel(hj) {
+    var caixaVazia = $('painel-vazio'), conteudo = $('painel-conteudo');
+    caixaVazia.replaceChildren();
+    if (st.modo !== 'ok' || !st.items.length) {
+      conteudo.hidden = true; caixaVazia.hidden = false;
+      if (st.modo === 'carregando') caixaVazia.append(el('p', { class: 'dica', text: 'Carregando o painel…' }));
+      else if (st.modo === 'erro') caixaVazia.append(vazio('Não deu para carregar', 'Confira sua conexão e tente de novo.', 'Tentar de novo', iniciarLista));
+      else caixaVazia.append(vazio('Comece pelo primeiro contato', 'Anote quem você abordou, o status e quando voltar a falar. Os gráficos aparecem aqui assim que houver contatos.', 'Novo contato', function () { abrirFicha(null); }));
+      return;
+    }
+    caixaVazia.hidden = true; conteudo.hidden = false;
+
+    var contagem = {}, porDia = {};
+    st.items.forEach(function (p) {
+      contagem[p.status] = (contagem[p.status] || 0) + 1;
+      var d = p.criadoEm ? PP.iso(new Date(p.criadoEm)) : '';
+      if (parse(d)) porDia[d] = (porDia[d] || 0) + 1;
+    });
+    G.rosca($('graf-status'), G.fatiasDeStatus(contagem), { titulo: 'Contatos por status', unidade: st.items.length === 1 ? 'contato' : 'contatos' });
+    G.linha($('graf-crescimento'), G.acumulado(porDia, hj), { titulo: 'Crescimento da base', unidade: 'contatos' });
+
+    var lista = $('lista-hoje'), urgentes = st.items.filter(function (p) { var k = classe(p, hj).tipo; return k === 'atrasado' || k === 'hoje'; });
+    urgentes.sort(function (a, b) { return a.proximoContato < b.proximoContato ? -1 : a.proximoContato > b.proximoContato ? 1 : colator.compare(nomeDe(a), nomeDe(b)); });
+    lista.replaceChildren(); lista.removeAttribute('role');
+    if (!urgentes.length) { lista.append(el('p', { class: 'dica mt-16', text: 'Nenhum retorno atrasado ou marcado para hoje.' })); return; }
+    lista.setAttribute('role', 'list');
+    urgentes.slice(0, 8).forEach(function (p) { lista.append(linha(p, hj)); });
+    if (urgentes.length > 8) lista.append(el('p', { class: 'dica mt-16', text: 'E mais ' + (urgentes.length - 8) + ' na aba Contatos.' }));
+  }
+
+  // ---------- render geral ----------
   function render() {
     var hj = hoje(), lista = $('lista'), n = { atrasados: 0, hoje: 0, semana: 0, sem: 0 };
     st.items.forEach(function (p) {
@@ -160,13 +199,20 @@
     });
     var pronto = st.modo === 'ok';
     ['atrasados', 'hoje', 'semana', 'sem'].forEach(function (k) { $('n-' + k).textContent = pronto ? n[k] : '–'; });
-    document.querySelectorAll('.stat').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.filtro === st.filtro)); });
+    document.querySelectorAll('.stat').forEach(function (b) { b.setAttribute('aria-pressed', String(st.visao === 'contatos' && b.dataset.filtro === st.filtro)); });
     $('btn-csv').hidden = !(pronto && st.items.length);
+
+    VISOES.forEach(function (v) {
+      $('v-' + v).hidden = st.visao !== v;
+      $('aba-' + v).setAttribute('aria-selected', String(st.visao === v));
+    });
+    if (st.visao === 'painel') { renderPainel(hj); return; }
+    if (st.visao === 'equipe') { renderEquipe(); return; }
 
     lista.replaceChildren();
     lista.removeAttribute('role');
     $('btn-limpar').hidden = true;
-    if (st.modo === 'carregando') { $('contagem').textContent = 'Carregando seus contatos…'; return; }
+    if (st.modo === 'carregando') { $('contagem').textContent = 'Carregando os contatos…'; return; }
     if (st.modo === 'erro') {
       $('contagem').textContent = '';
       lista.append(vazio('Não deu para carregar', 'Confira sua conexão e tente de novo.', 'Tentar de novo', iniciarLista));
@@ -174,7 +220,7 @@
     }
     if (!st.items.length) {
       $('contagem').textContent = 'Nenhum contato cadastrado';
-      lista.append(vazio('Comece pelo primeiro contato', 'Anote quem você abordou, o status e quando voltar a falar. No dia marcado, o contato aparece no topo desta página.', 'Novo contato', function () { abrirFicha(null); }));
+      lista.append(vazio('Comece pelo primeiro contato', 'Anote quem você abordou, o status e quando voltar a falar. No dia marcado, o contato aparece no topo.', 'Novo contato', function () { abrirFicha(null); }));
       return;
     }
     var vis = visiveis(hj), filtrando = st.filtro !== 'todos' || st.status || st.q.trim();
@@ -187,6 +233,12 @@
     vis.forEach(function (p) { lista.append(linha(p, hj)); });
   }
   function limpar() { st.filtro = 'todos'; st.status = ''; st.q = ''; $('q').value = ''; $('filtro-status').value = ''; render(); }
+  function irVisao(v) {
+    st.visao = VISOES.indexOf(v) === -1 ? 'painel' : v;
+    try { history.replaceState(null, '', st.visao === 'painel' ? window.location.pathname : '#' + st.visao); } catch (e) { /* sem histórico */ }
+    if (st.visao === 'equipe' && !st.equipe) carregarEquipe();
+    render();
+  }
 
   // ---------- ficha ----------
   function resumoFicha() {
@@ -211,10 +263,11 @@
 
     var rap = $('ficha-rapido'); rap.replaceChildren();
     if (p) {
-      var wa = linkWhats(p.telefone), site = linkSite(p.link);
+      var wa = linkWhats(p.telefone), site = linkSite(p.link), autor = st.nomes[p.userId];
       if (wa) rap.append(el('a', { href: wa, target: '_blank', rel: 'noopener noreferrer', text: 'Abrir WhatsApp' }));
       if (site) rap.append(el('a', { href: site, target: '_blank', rel: 'noopener noreferrer', text: 'Abrir site ou Instagram' }));
       if (p.ultimoContato) rap.append(el('span', { text: 'Último contato: ' + dataCurta(p.ultimoContato) }));
+      if (autor) rap.append(el('span', { text: 'Cadastrado por ' + autor }));
     }
     rap.hidden = !rap.childNodes.length;
 
@@ -222,7 +275,7 @@
     hist.forEach(function (h) {
       ul.append(el('li', null,
         el('div', { class: 'meta' }, el('b', { text: dataCurta(h.data) || 'Sem data' }),
-          h.canal ? ' · ' + h.canal : '', h.status ? ' · ' + statusDe(h.status).nome : ''),
+          h.canal ? ' · ' + h.canal : '', h.status ? ' · ' + statusDe(h.status).nome : '', h.por ? ' · ' + h.por : ''),
         h.nota ? el('div', { class: 'nota', text: h.nota }) : null));
     });
     $('ficha-hist-secao').hidden = !hist.length;
@@ -296,8 +349,8 @@
     var data = parse($('l-data').value) ? $('l-data').value : hoje();
     if (intervaloSel() === 'data' && !proximoDoLog()) { err.textContent = 'Escolha a data do próximo contato.'; err.hidden = false; $('l-proximo').focus(); return; }
     var canal = document.querySelector('input[name="l-canal"]:checked');
-    var entrada = { data: data, canal: canal ? canal.value : '', nota: $('l-nota').value.trim(), status: $('l-status').value };
-    var antigo = p.historico.map(function (h) { return { data: h.data || '', canal: h.canal || '', nota: h.nota || '', status: h.status || '' }; });
+    var entrada = { data: data, canal: canal ? canal.value : '', nota: $('l-nota').value.trim(), status: $('l-status').value, por: (st.usuario && st.usuario.nome) || '' };
+    var antigo = p.historico.map(function (h) { return { data: h.data || '', canal: h.canal || '', nota: h.nota || '', status: h.status || '', por: h.por || '' }; });
     var hist = [entrada].concat(antigo).sort(function (a, b) { return String(b.data).localeCompare(String(a.data)); }).slice(0, 200);
     var prox = proximoDoLog();
     var d = { status: entrada.status, ultimo_contato: hist[0].data || null, proximo_contato: prox || null, historico: hist };
@@ -313,7 +366,7 @@
   function csv() {
     var cols = [['Empresa', 'empresa'], ['Contato', 'contato'], ['Cargo', 'cargo'], ['Telefone', 'telefone'], ['E-mail', 'email'], ['Cidade', 'cidade'], ['UF', 'uf'],
       ['Segmento', 'segmento'], ['Porte', 'porte'], ['Origem', 'origem'], ['Site ou Instagram', 'link'], ['Interesse', 'interesse'], ['Status', 'status'],
-      ['Último contato', 'ultimoContato'], ['Próximo contato', 'proximoContato'], ['Observações', 'observacoes'], ['Histórico', 'historico']];
+      ['Último contato', 'ultimoContato'], ['Próximo contato', 'proximoContato'], ['Observações', 'observacoes'], ['Histórico', 'historico'], ['Cadastrado por', 'userId']];
     function cel(v) {
       v = String(v == null ? '' : v);
       if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;   // evita que a planilha trate o texto como fórmula
@@ -324,6 +377,7 @@
       linhas.push(cols.map(function (c) {
         var v = p[c[1]];
         if (c[1] === 'status') v = statusDe(v).nome;
+        else if (c[1] === 'userId') v = st.nomes[v] || '';
         else if (c[1] === 'historico') v = v.map(function (h) { return [h.data, h.canal, h.nota].filter(Boolean).join(' - '); }).join(' | ');
         return cel(v);
       }).join(';'));
@@ -333,6 +387,91 @@
     document.body.append(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
     toast('Planilha baixada');
+  }
+
+  // ---------- equipe ----------
+  var ERROS_EQUIPE = {
+    email_invalido: 'Confira o e-mail digitado.',
+    ja_membro: 'Esta pessoa já faz parte da equipe.',
+    ja_convidado: 'Este e-mail já está na lista de quem falta se cadastrar.',
+    indisponivel: 'Este e-mail já usa o sistema em outra empresa. Fale com a PHAR para mover a conta.',
+    limite_equipe: 'A equipe chegou ao limite de 20 pessoas.',
+    sem_permissao: 'Só o responsável pela conta pode alterar a equipe.',
+    nao_encontrado: 'Não deu para remover esta pessoa.',
+    nome_invalido: 'Informe o nome da empresa.'
+  };
+  function erroEquipe(e) { return ERROS_EQUIPE[(e && e.message) || ''] || 'Não deu para concluir agora. Tente de novo.'; }
+  function carregarEquipe() {
+    return sb.rpc('equipe_listar').then(function (r) {
+      st.equipe = checar(r); st.nomes = {};
+      st.equipe.membros.forEach(function (m) { st.nomes[m.id] = m.nome || m.email; });
+      if (st.visao === 'equipe') renderEquipe();
+    }).catch(function () { st.equipe = st.equipe || { membros: [], convites: [], pode_gerenciar: false, erro: true }; if (st.visao === 'equipe') renderEquipe(); });
+  }
+  function renderEquipe() {
+    var membros = $('eq-membros'), convites = $('eq-convites'), eq = st.equipe;
+    membros.replaceChildren(); convites.replaceChildren();
+    if (!eq) { membros.append(el('p', { class: 'dica', text: 'Carregando a equipe…' })); return; }
+    if (eq.erro) { membros.append(el('p', { class: 'erro', text: 'Não deu para carregar a equipe. Recarregue a página.' })); return; }
+    eq.membros.forEach(function (m) {
+      var eu = st.usuario && m.id === st.usuario.id, acoes = null;
+      if (eq.pode_gerenciar && !eu && m.papel !== 'dono') {
+        acoes = st.removendo === m.id
+          ? el('div', { class: 'eq-acoes' }, el('span', { text: 'Tirar o acesso?' }),
+              el('button', { class: 'btn btn-danger btn-sm', type: 'button', text: 'Sim, remover', onclick: function () { remover(m); } }),
+              el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Manter', onclick: function () { st.removendo = ''; renderEquipe(); } }))
+          : el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Remover', onclick: function () { st.removendo = m.id; renderEquipe(); } });
+      }
+      membros.append(el('div', { class: 'eq-linha' },
+        el('div', null,
+          el('div', { class: 'nome' }, m.nome || 'Sem nome', eu ? ' (você)' : '',
+            el('span', { class: 'tag tag-papel', text: m.papel === 'dono' ? 'Responsável' : 'Colaborador' })),
+          el('div', { class: 'sub', text: m.email + (m.ultimo_acesso ? ' · último acesso em ' + PP.dataHora(m.ultimo_acesso) : ' · ainda não entrou') })),
+        acoes));
+    });
+    $('eq-gerenciar').hidden = !eq.pode_gerenciar;
+    $('eq-empresa').hidden = !eq.pode_gerenciar;
+    if (eq.convites.length) {
+      convites.append(el('p', { class: 'dica', text: 'Autorizados, aguardando o cadastro:' }));
+      eq.convites.forEach(function (c) {
+        convites.append(el('div', { class: 'eq-linha' },
+          el('div', null, el('div', { class: 'sub', text: c.email }), el('div', { class: 'sub', text: 'Autorizado em ' + PP.dataHora(c.criado_em) })),
+          el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Cancelar', onclick: function () { cancelarConvite(c); } })));
+      });
+    }
+  }
+  function remover(m) {
+    st.removendo = '';
+    sb.rpc('equipe_remover', { p_usuario: m.id }).then(function (r) { checar(r); toast('Acesso removido'); return carregarEquipe(); })
+      .catch(function (e) { toast(erroEquipe(e)); renderEquipe(); });
+  }
+  function cancelarConvite(c) {
+    sb.rpc('equipe_cancelar_convite', { p_id: c.id }).then(function (r) { checar(r); toast('Autorização cancelada'); return carregarEquipe(); })
+      .catch(function (e) { toast(erroEquipe(e)); });
+  }
+  function convidar(ev) {
+    ev.preventDefault();
+    var email = $('eq-email').value.trim().toLowerCase(), err = $('eq-erro'), btn = $('eq-convidar');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = ERROS_EQUIPE.email_invalido; err.hidden = false; return; }
+    err.hidden = true; btn.disabled = true;
+    sb.rpc('equipe_convidar', { p_email: email }).then(function (r) {
+      checar(r); $('eq-email').value = ''; toast('E-mail autorizado. Peça para a pessoa criar a conta.'); return carregarEquipe();
+    }).catch(function (e) { err.textContent = erroEquipe(e); err.hidden = false; })
+      .then(function () { btn.disabled = false; });
+  }
+  function renomearEmpresa(ev) {
+    ev.preventDefault();
+    var nome = $('eq-nome-empresa').value.trim(), btn = $('eq-salvar-nome');
+    if (!nome) { toast(ERROS_EQUIPE.nome_invalido); return; }
+    btn.disabled = true;
+    sb.rpc('empresa_renomear', { p_nome: nome }).then(function (r) {
+      checar(r); st.empresa.nome = nome; $('topo-empresa').textContent = nome; $('simulando-nome').textContent = nome; toast('Nome da empresa atualizado');
+    }).catch(function (e) { toast(erroEquipe(e)); }).then(function () { btn.disabled = false; });
+  }
+  function copiarLink() {
+    var link = window.location.origin + '/entrar?modo=criar';
+    (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(function () { toast('Link copiado'); })
+      .catch(function () { toast('Link de cadastro: ' + link); });
   }
 
   // ---------- telas de acesso ----------
@@ -356,17 +495,27 @@
   function entrar() {
     PP.sessao().then(function (s) {
       if (!s) { PP.irPara('/entrar'); return null; }
-      return PP.perfil().then(function (perfil) {
-        var status = perfil ? perfil.status : 'pendente';
-        var primeiro = perfil && perfil.nome ? perfil.nome.split(' ')[0] : '';
-        if (status === 'bloqueada') { estado('Conta bloqueada', 'O acesso desta conta está suspenso. Fale com a PHAR Consultoria para reativar.', false); return; }
-        if (status !== 'ativa') {
-          estado('Conta aguardando liberação', (primeiro ? primeiro + ', recebemos' : 'Recebemos') + ' seu cadastro. Assim que a conta for liberada, você entra direto no sistema por esta página.', true);
+      return PP.sessaoApp().then(function (ses) {
+        var u = ses && ses.usuario, emp = ses && ses.empresa;
+        var primeiro = u && u.nome ? u.nome.split(' ')[0] : '';
+        if (!u) { estado('Conta não encontrada', 'Saia e entre de novo. Se continuar, fale com a PHAR Consultoria.', true); return; }
+        if (u.status !== 'ativa') { estado('Acesso removido', 'Seu acesso a esta empresa foi removido. Fale com o responsável pela conta.', false); return; }
+        if (!emp) { estado('Conta sem empresa', 'Sua conta ainda não está ligada a uma empresa. Fale com quem te convidou ou com a PHAR Consultoria.', true); return; }
+        if (!ses.simulando && emp.status === 'bloqueada') { estado('Acesso suspenso', 'O acesso da ' + emp.nome + ' está suspenso. Fale com a PHAR Consultoria para reativar.', false); return; }
+        if (!ses.simulando && emp.status !== 'ativa') {
+          estado('Aguardando liberação', (primeiro ? primeiro + ', recebemos' : 'Recebemos') + ' o cadastro da ' + emp.nome + '. Assim que a conta for liberada, você entra direto no sistema por esta página.', true);
           return;
         }
-        $('topo-nome').textContent = perfil.nome || s.user.email || '';
-        $('link-admin').hidden = !perfil.is_admin;
-        tela('app'); iniciarLista();
+        st.usuario = u; st.empresa = emp; st.simulando = !!ses.simulando;
+        $('topo-empresa').textContent = emp.nome;
+        $('topo-nome').textContent = u.nome || u.email || '';
+        $('link-admin').hidden = !u.is_admin;
+        $('faixa-simulando').hidden = !st.simulando;
+        $('simulando-nome').textContent = emp.nome;
+        $('eq-nome-empresa').value = emp.nome;
+        var inicial = (window.location.hash || '').replace('#', '');
+        st.visao = VISOES.indexOf(inicial) === -1 ? 'painel' : inicial;
+        tela('app'); iniciarLista(); carregarEquipe();
       });
     }).catch(function () {
       estado('Não deu para carregar', 'Confira sua conexão e tente de novo.', true);
@@ -382,9 +531,14 @@
   UFS.forEach(function (u) { $('f-uf').append(el('option', { value: u, text: u })); });
 
   $('btn-novo').addEventListener('click', function () { if (st.modo === 'ok') abrirFicha(null); else toast('Aguarde: os contatos ainda estão carregando'); });
+  document.querySelectorAll('.aba-app').forEach(function (b) { b.addEventListener('click', function () { irVisao(b.dataset.visao); }); });
   document.querySelectorAll('.stat').forEach(function (b) {
-    b.addEventListener('click', function () { st.filtro = st.filtro === b.dataset.filtro ? 'todos' : b.dataset.filtro; render(); });
+    b.addEventListener('click', function () {
+      st.filtro = (st.visao === 'contatos' && st.filtro === b.dataset.filtro) ? 'todos' : b.dataset.filtro;
+      irVisao('contatos');
+    });
   });
+  $('btn-ver-retornos').addEventListener('click', function () { st.filtro = 'todos'; irVisao('contatos'); });
   $('q').addEventListener('input', function () { st.q = this.value; render(); });
   $('filtro-status').addEventListener('change', function () { st.status = this.value; render(); });
   $('ordem').addEventListener('change', function () { st.ordem = this.value; render(); });
@@ -393,6 +547,10 @@
   document.querySelectorAll('[data-fechar]').forEach(function (b) { b.addEventListener('click', function () { b.closest('dialog').close(); }); });
   document.querySelectorAll('[data-sair]').forEach(function (b) { b.addEventListener('click', PP.sair); });
   $('estado-atualizar').addEventListener('click', function () { tela('carregando'); entrar(); });
+  $('btn-sair-simulacao').addEventListener('click', function () {
+    sb.rpc('admin_simular', { alvo: null }).then(function (r) { checar(r); PP.irPara('/admin'); })
+      .catch(function () { toast('Não deu para sair da simulação. Tente de novo.'); });
+  });
 
   $('form-ficha').addEventListener('submit', salvarFicha);
   $('f-proximo').addEventListener('input', resumoFicha);
@@ -411,6 +569,10 @@
   document.querySelectorAll('input[name="l-int"]').forEach(function (r) { r.addEventListener('change', function () { st.intTocado = true; resumoLog(); }); });
   $('l-data').addEventListener('input', resumoLog);
   $('l-proximo').addEventListener('input', resumoLog);
+
+  $('form-convite').addEventListener('submit', convidar);
+  $('form-empresa').addEventListener('submit', renomearEmpresa);
+  $('eq-copiar').addEventListener('click', copiarLink);
 
   sb.auth.onAuthStateChange(function (evento) { if (evento === 'SIGNED_OUT') PP.irPara('/entrar'); });
   entrar();

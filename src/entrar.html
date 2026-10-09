@@ -56,8 +56,9 @@
             <input type="text" id="c-nome" maxlength="120" autocomplete="name" required>
           </div>
           <div class="campo">
-            <label for="c-empresa">Empresa (opcional)</label>
-            <input type="text" id="c-empresa" maxlength="120" autocomplete="organization">
+            <label for="c-empresa">Nome da sua empresa</label>
+            <input type="text" id="c-empresa" maxlength="120" autocomplete="organization" aria-describedby="c-empresa-dica">
+            <p class="dica" id="c-empresa-dica">Vai entrar na equipe de uma empresa que já usa o sistema? Deixe em branco e use o e-mail que ela autorizou.</p>
           </div>
           <div class="campo">
             <label for="c-email">E-mail</label>
@@ -70,7 +71,7 @@
           </div>
           <p class="erro" id="c-erro" role="alert" hidden></p>
           <button class="btn btn-primary btn-largo" type="submit" id="c-botao">Criar conta</button>
-          <p class="dica">Depois de confirmar o e-mail, sua conta passa por uma liberação antes do primeiro acesso.</p>
+          <p class="dica">Depois de confirmar o e-mail, a conta de uma empresa nova passa por uma liberação antes do primeiro acesso.</p>
         </form>
       </section>
 
