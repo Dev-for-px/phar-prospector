@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&amp;family=Marcellus&amp;display=swap">
+<link rel="stylesheet" href="/css/estilo.css">
+<title>Painel administrativo | PHAR Prospector</title>
+<meta name="robots" content="noindex">
+</head>
+<body>
+
+<div class="estado" id="tela-carregando">
+  <p class="dica">Carregando…</p>
+</div>
+
+<div class="estado" id="tela-estado" hidden>
+  <p class="eyebrow">PHAR Prospector</p>
+  <h1 id="estado-titulo"></h1>
+  <p id="estado-texto"></p>
+  <div class="acoes">
+    <a class="btn btn-primary" href="/app">Ir para o sistema</a>
+    <button class="btn btn-sec" type="button" data-sair>Sair</button>
+  </div>
+</div>
+
+<div id="tela-admin" hidden>
+  <header class="band inverse">
+    <div class="wrap">
+      <div class="topo">
+        <a class="marca" href="/admin"><span>PHAR Prospector</span><span class="ponto-marca" aria-hidden="true"></span></a>
+        <div class="topo-acoes">
+          <span class="topo-nome" id="topo-nome"></span>
+          <a class="topo-link" href="/app">Meus contatos</a>
+          <button class="topo-link" type="button" data-sair>Sair</button>
+        </div>
+      </div>
+      <div class="band-top">
+        <div>
+          <h1>Painel administrativo</h1>
+          <p class="band-sub">Quem tem conta, quem está esperando liberação e quanto cada um usa.</p>
+        </div>
+        <button class="btn btn-fantasma" type="button" id="btn-atualizar">Atualizar lista</button>
+      </div>
+      <div class="stats" role="group" aria-label="Filtrar por situação da conta">
+        <button class="stat" type="button" data-filtro="pendente" aria-pressed="false"><b id="n-pendente">–</b><span>Aguardando liberação</span></button>
+        <button class="stat" type="button" data-filtro="ativa" aria-pressed="false"><b id="n-ativa">–</b><span>Contas ativas</span></button>
+        <button class="stat" type="button" data-filtro="bloqueada" aria-pressed="false"><b id="n-bloqueada">–</b><span>Bloqueadas</span></button>
+        <div class="stat"><b id="n-contatos">–</b><span>Contatos guardados</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap sistema">
+    <div class="toolbar">
+      <div class="campo busca">
+        <label for="q">Buscar conta</label>
+        <input type="search" id="q" placeholder="Nome, empresa ou e-mail" autocomplete="off">
+      </div>
+    </div>
+    <div class="aviso aviso-erro" id="aviso-erro" role="alert" hidden></div>
+    <div class="resumo">
+      <span id="contagem">Carregando contas…</span>
+      <button class="linkbtn" type="button" id="btn-limpar" hidden>Limpar filtros</button>
+    </div>
+    <div class="adm-head" aria-hidden="true">
+      <span>Conta</span><span>E-mail</span><span>Cadastro</span><span>Contatos</span><span>Situação</span><span></span>
+    </div>
+    <div class="lista" id="lista"></div>
+    <p class="dica mt-24">O painel mostra a conta e a quantidade de contatos de cada cliente. O conteúdo dos contatos fica visível só para o dono da conta.</p>
+  </main>
+</div>
+
+<p id="toast" role="status" aria-live="polite"></p>
+<script src="/vendor/supabase.js"></script>
+<script src="/js/config.js"></script>
+<script src="/js/comum.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&amp;family=Marcellus&amp;display=swap">
+<link rel="stylesheet" href="/css/estilo.css">
+<title>Prospecção | PHAR Prospector</title>
+<meta name="robots" content="noindex">
+</head>
+<body>
+
+<div class="estado" id="tela-carregando">
+  <p class="dica">Carregando…</p>
+</div>
+
+<div class="estado" id="tela-estado" hidden>
+  <p class="eyebrow">PHAR Prospector</p>
+  <h1 id="estado-titulo"></h1>
+  <p id="estado-texto"></p>
+  <div class="acoes">
+    <button class="btn btn-primary" type="button" id="estado-atualizar">Verificar de novo</button>
+    <button class="btn btn-sec" type="button" data-sair>Sair</button>
+  </div>
+</div>
+
+<div id="tela-app" hidden>
+  <header class="band inverse">
+    <div class="wrap">
+      <div class="topo">
+        <a class="marca" href="/app"><span>PHAR Prospector</span><span class="ponto-marca" aria-hidden="true"></span></a>
+        <div class="topo-acoes">
+          <span class="topo-nome" id="topo-nome"></span>
+          <a class="topo-link" href="/admin" id="link-admin" hidden>Painel admin</a>
+          <button class="topo-link" type="button" data-sair>Sair</button>
+        </div>
+      </div>
+      <div class="band-top">
+        <div>
+          <h1>Prospecção</h1>
+          <p class="band-sub">Quem você já abordou, em que pé está e quando voltar a falar.</p>
+        </div>
+        <button class="btn btn-accent" type="button" id="btn-novo">Novo contato</button>
+      </div>
+      <div class="stats" role="group" aria-label="Filtrar por retorno">
+        <button class="stat" type="button" data-filtro="atrasados" aria-pressed="false"><b id="n-atrasados">–</b><span>Atrasados</span></button>
+        <button class="stat" type="button" data-filtro="hoje" aria-pressed="false"><b id="n-hoje">–</b><span>Para hoje</span></button>
+        <button class="stat" type="button" data-filtro="semana" aria-pressed="false"><b id="n-semana">–</b><span>Próximos 7 dias</span></button>
+        <button class="stat" type="button" data-filtro="sem" aria-pressed="false"><b id="n-sem">–</b><span>Sem retorno marcado</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap sistema">
+    <div class="toolbar">
+      <div class="campo busca">
+        <label for="q">Buscar</label>
+        <input type="search" id="q" placeholder="Empresa, pessoa, cidade, telefone" autocomplete="off">
+      </div>
+      <div class="campo">
+        <label for="filtro-status">Status</label>
+        <select id="filtro-status"><option value="">Todos</option></select>
+      </div>
+      <div class="campo">
+        <label for="ordem">Ordenar por</label>
+        <select id="ordem">
+          <option value="proximo">Próximo contato</option>
+          <option value="nome">Nome</option>
+          <option value="recentes">Cadastro mais recente</option>
+        </select>
+      </div>
+      <button class="btn btn-sec" type="button" id="btn-csv" hidden>Baixar planilha (CSV)</button>
+    </div>
+
+    <div class="aviso aviso-erro" id="aviso-erro" role="alert" hidden></div>
+
+    <div class="resumo">
+      <span id="contagem">Carregando seus contatos…</span>
+      <button class="linkbtn" type="button" id="btn-limpar" hidden>Limpar filtros</button>
+    </div>
+
+    <div class="lista-head" aria-hidden="true">
+      <span>Contato</span><span>Cidade e telefone</span><span>Status</span><span>Próximo contato</span><span></span>
+    </div>
+    <div class="lista" id="lista"></div>
+  </main>
+</div>
+
+<p id="toast" role="status" aria-live="polite"></p>
+
+<!-- Ficha do contato -->
+<dialog id="dlg-ficha" aria-labelledby="ficha-titulo">
+  <form id="form-ficha" novalidate>
+    <div class="dlg-head">
+      <h2 id="ficha-titulo">Novo contato</h2>
+      <button class="fechar" type="button" data-fechar aria-label="Fechar">×</button>
+    </div>
+    <div class="dlg-body">
+      <div class="contato-rapido" id="ficha-rapido" hidden></div>
+
+      <div class="grid">
+        <div class="campo col-2">
+          <label for="f-empresa">Empresa ou negócio</label>
+          <input type="text" id="f-empresa" maxlength="120" placeholder="Ex.: Clínica Bem Viver" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="f-contato">Pessoa de contato</label>
+          <input type="text" id="f-contato" maxlength="120" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="f-cargo">Cargo ou papel</label>
+          <input type="text" id="f-cargo" maxlength="80" placeholder="Dono, gerente, sócia" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="f-telefone">Telefone ou WhatsApp</label>
+          <input type="tel" id="f-telefone" maxlength="30" placeholder="(37) 99999-0000" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="f-email">E-mail</label>
+          <input type="email" id="f-email" maxlength="120" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="f-cidade">Cidade</label>
+          <input type="text" id="f-cidade" maxlength="80" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="f-uf">Estado</label>
+          <select id="f-uf"><option value="">—</option></select>
+        </div>
+        <div class="campo">
+          <label for="f-segmento">Segmento</label>
+          <input type="text" id="f-segmento" maxlength="80" list="segmentos" placeholder="Clínica, loja, restaurante" autocomplete="off">
+          <datalist id="segmentos">
+            <option value="Clínica"></option><option value="Odontologia"></option><option value="Restaurante"></option>
+            <option value="Loja"></option><option value="Academia"></option><option value="Advocacia"></option>
+            <option value="Contabilidade"></option><option value="Imobiliária"></option><option value="Oficina"></option>
+            <option value="Salão de beleza"></option><option value="Pet shop"></option><option value="Escola"></option>
+          </datalist>
+        </div>
+        <div class="campo">
+          <label for="f-porte">Porte</label>
+          <select id="f-porte">
+            <option value="">—</option><option>Pequeno</option><option>Médio</option><option>Grande</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="f-origem">De onde veio</label>
+          <select id="f-origem">
+            <option value="">—</option><option>Indicação</option><option>Parceiro</option><option>Prospecção ativa</option>
+            <option>Google ou Maps</option><option>Instagram</option><option>Site</option><option>Evento</option><option>Outro</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="f-link">Site ou Instagram</label>
+          <input type="text" id="f-link" maxlength="200" placeholder="instagram.com/negocio" autocomplete="off">
+        </div>
+        <div class="campo col-2">
+          <label for="f-interesse">O que interessa a ele</label>
+          <input type="text" id="f-interesse" maxlength="200" placeholder="Produto ou serviço que chamou atenção" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="secao">
+        <h3>Andamento</h3>
+        <div class="grid">
+          <div class="campo">
+            <label for="f-status">Status</label>
+            <select id="f-status"></select>
+          </div>
+          <div class="campo">
+            <label for="f-proximo">Próximo contato</label>
+            <input type="date" id="f-proximo">
+          </div>
+          <div class="campo col-2">
+            <div class="chips" id="f-atalhos" role="group" aria-label="Marcar o próximo contato">
+              <button class="chip" type="button" data-dias="0">Hoje</button>
+              <button class="chip" type="button" data-dias="7">7 dias</button>
+              <button class="chip" type="button" data-dias="15">15 dias</button>
+              <button class="chip" type="button" data-dias="30">30 dias</button>
+              <button class="chip" type="button" data-dias="60">60 dias</button>
+              <button class="chip" type="button" data-dias="90">90 dias</button>
+              <button class="chip" type="button" data-dias="180">6 meses</button>
+              <button class="chip" type="button" data-dias="">Sem data</button>
+            </div>
+            <p class="dica" id="f-resumo"></p>
+          </div>
+          <div class="campo col-2">
+            <label for="f-obs">Observações</label>
+            <textarea id="f-obs" maxlength="4000" placeholder="O que ele precisa, objeções, quem decide, melhor horário para ligar"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="secao" id="ficha-hist-secao" hidden>
+        <h3>Histórico de contatos</h3>
+        <ul class="hist" id="ficha-hist"></ul>
+      </div>
+
+      <p class="erro" id="ficha-erro" role="alert" hidden></p>
+      <div class="acoes">
+        <button class="btn btn-primary" type="submit" id="ficha-salvar">Salvar contato</button>
+        <button class="btn btn-sec" type="button" id="ficha-registrar" hidden>Registrar contato</button>
+        <button class="btn btn-danger empurra" type="button" id="ficha-excluir" hidden>Excluir</button>
+        <span class="acoes empurra" id="ficha-confirma" hidden>
+          <span>Excluir de vez?</span>
+          <button class="btn btn-danger" type="button" id="ficha-excluir-sim">Sim, excluir</button>
+          <button class="btn btn-sec" type="button" id="ficha-excluir-nao">Manter</button>
+        </span>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- Registrar contato -->
+<dialog id="dlg-log" aria-labelledby="log-titulo">
+  <form id="form-log" novalidate>
+    <div class="dlg-head">
+      <div>
+        <p class="dica">Registrar contato</p>
+        <h2 id="log-titulo">—</h2>
+      </div>
+      <button class="fechar" type="button" data-fechar aria-label="Fechar">×</button>
+    </div>
+    <div class="dlg-body">
+      <div class="grid">
+        <div class="campo">
+          <label for="l-data">Quando falou</label>
+          <input type="date" id="l-data">
+        </div>
+        <div class="campo">
+          <label for="l-status">Status agora</label>
+          <select id="l-status"></select>
+        </div>
+        <fieldset class="campo col-2">
+          <legend>Por onde</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="l-canal" id="l-canal-ligacao" value="Ligação"><span>Ligação</span></label>
+            <label class="chip"><input type="radio" name="l-canal" id="l-canal-whats" value="WhatsApp"><span>WhatsApp</span></label>
+            <label class="chip"><input type="radio" name="l-canal" id="l-canal-email" value="E-mail"><span>E-mail</span></label>
+            <label class="chip"><input type="radio" name="l-canal" id="l-canal-presencial" value="Presencial"><span>Presencial</span></label>
+            <label class="chip"><input type="radio" name="l-canal" id="l-canal-outro" value="Outro"><span>Outro</span></label>
+          </div>
+        </fieldset>
+        <div class="campo col-2">
+          <label for="l-nota">O que ficou combinado</label>
+          <textarea id="l-nota" maxlength="2000" placeholder="Ex.: gostou da ideia, mas só decide depois do fim do ano"></textarea>
+        </div>
+        <fieldset class="campo col-2">
+          <legend>Voltar a falar em</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="l-int" id="l-int-7" value="7"><span>7 dias</span></label>
+            <label class="chip"><input type="radio" name="l-int" id="l-int-15" value="15"><span>15 dias</span></label>
+            <label class="chip"><input type="radio" name="l-int" id="l-int-30" value="30"><span>30 dias</span></label>
+            <label class="chip"><input type="radio" name="l-int" id="l-int-60" value="60"><span>60 dias</span></label>
+            <label class="chip"><input type="radio" name="l-int" id="l-int-90" value="90"><span>90 dias</span></label>
+            <label class="chip"><input type="radio" name="l-int" id="l-int-180" value="180"><span>6 meses</span></label>
+            <label class="chip"><input type="radio" name="l-int" id="l-int-data" value="data"><span>Escolher data</span></label>
+            <label class="chip"><input type="radio" name="l-int" id="l-int-nenhum" value="nenhum"><span>Sem retorno</span></label>
+          </div>
+          <input type="date" id="l-proximo" class="mt-16" aria-label="Data do próximo contato" hidden>
+          <p class="dica" id="l-resumo"></p>
+        </fieldset>
+      </div>
+      <p class="erro" id="log-erro" role="alert" hidden></p>
+      <div class="acoes">
+        <button class="btn btn-primary" type="submit" id="log-salvar">Salvar registro</button>
+        <button class="btn btn-sec" type="button" data-fechar>Cancelar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<script src="/vendor/supabase.js"></script>
+<script src="/js/config.js"></script>
+<script src="/js/comum.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
