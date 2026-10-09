@@ -132,6 +132,7 @@ Status de um contato, na ordem do funil: A contatar, Contato feito, Em conversa,
 ```
 phar-prospector/
 ├── README.md                 resumo para quem abre o repositório
+├── CLAUDE.md                 regras que o Claude segue neste projeto (inclui: sempre atualizar a documentação)
 ├── package.json              dependências e comandos (build, dev, schema)
 ├── package-lock.json         versões exatas das dependências
 ├── build.mjs                 monta a pasta dist/ e minifica JS e CSS
@@ -370,6 +371,8 @@ O caminho normal:
 2. A mudança é enviada para a branch `main` do GitHub.
 3. A Vercel percebe o envio, roda `npm run build` e publica em cerca de um minuto.
 
+**Toda mudança atualiza esta documentação no mesmo envio.** É regra fixa do projeto, escrita no arquivo `CLAUDE.md`, que o Claude lê sozinho ao abrir o repositório. O PDF e o kit de reconstrução são fotos de uma data: são gerados de novo a pedido ou depois de mudança grande.
+
 Quando a mudança mexe no banco:
 
 1. Cria-se um arquivo novo em `supabase/migrations/`, com data no nome.
@@ -507,4 +510,5 @@ Fontes: [Supabase, Production Checklist](https://supabase.com/docs/guides/deploy
 | 9 out 2026 | `9bde02b` | Empresas com vários usuários, simular acesso, gráficos e backup |
 | 9 out 2026 | `b3e7b30` | Cadastro completo da empresa (aba Empresa) |
 | 9 out 2026 | `9be6f69` | Permissões por colaborador |
-| 9 out 2026 | logo depois de `9be6f69` | Documentação completa, banco em arquivo único e kit de reconstrução |
+| 9 out 2026 | `d1d55b3` | Documentação completa, banco em arquivo único e kit de reconstrução |
+| 9 out 2026 | logo depois de `d1d55b3` | Regra fixa: toda mudança atualiza a documentação (`CLAUDE.md`) |

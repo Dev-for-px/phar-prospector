@@ -2,7 +2,7 @@
 
 Controle de prospecção com retorno programado: cada contato abordado, o status da conversa e o dia de voltar a falar.
 
-**Documentação completa e passo a passo de reconstrução:** [`docs/DOCUMENTACAO.md`](docs/DOCUMENTACAO.md). O banco inteiro em um arquivo só: [`supabase/schema-completo.sql`](supabase/schema-completo.sql).
+**Documentação completa e passo a passo de reconstrução:** [`docs/DOCUMENTACAO.md`](docs/DOCUMENTACAO.md). O banco inteiro em um arquivo só: [`supabase/schema-completo.sql`](supabase/schema-completo.sql). Regra do projeto: toda mudança atualiza a documentação no mesmo envio (ver [`CLAUDE.md`](CLAUDE.md)).
 
 ## As páginas
 
