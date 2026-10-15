@@ -538,7 +538,9 @@ Fontes: [Supabase, Production Checklist](https://supabase.com/docs/guides/deploy
 | 15 out 2026 | — | Plano atualizado: base da Receita como motor de busca (Fase 2 detalhada), Google Maps adiado |
 | 15 out 2026 | — | Repositório transferido para a organização `Dev-for-px` no GitHub |
 | 15 out 2026 | `1df3474` | Aba Buscar leads (base da Receita, só MG): migração `busca_receita`, permissão `buscar_leads`, leitor de Parquet no navegador, script mensal em `scripts/receita/`. Enquanto a base não é publicada no Hugging Face, a aba aparece só para o administrador |
+| 15 out 2026 | `2f8551a` | Números da primeira carga de MG (2.935.399 empresas, 152,4 MB) |
 | 15 out 2026 | logo depois de `1df3474` | Script da Receita converte os arquivos para UTF-8 (havia bytes inválidos). Vercel reconectada ao repositório da `Dev-for-px` (não publicava desde 9 out) |
+| 15 out 2026 | logo depois de `2f8551a` | Busca testada com a base de MG (Pompéu + terapia: 11 empresas em 0,8 s lendo 1 MB; BH só com e-mail: 505 mil em 4 s lendo 4,8 MB). Ajustes: WhatsApp reconhece celular no formato antigo (sem o 9), tipo de logradouro repetido no endereço, lista antiga some quando a busca dá erro |
 
 ## 17. Base da Receita (aba Buscar leads)
 
@@ -551,4 +553,3 @@ A base pública de CNPJ da Receita Federal é processada uma vez por mês em arq
 - **Como a busca lê pouco:** o arquivo está ordenado por município e CNAE; `municipios.json` guarda a primeira linha e a quantidade de cada cidade. Com ramo só principal, a tela lê primeiro só a coluna de CNAE da cidade e depois só os trechos daquele ramo.
 - **Busca só por CNPJ:** a BrasilAPI diz a cidade do CNPJ (código de município da Receita) e a tela procura nessa cidade.
 - **Primeira carga (base de outubro de 2026, MG):** 2.935.399 empresas ativas; `uf=MG.parquet` com 152,4 MB; processamento em 2,5 minutos num Mac (o download dos ~7 GB da Receita leva de 20 a 40 minutos).
-

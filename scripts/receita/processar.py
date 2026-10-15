@@ -116,7 +116,9 @@ def main():
             cnpj_basico, cnpj_basico || cnpj_ordem || cnpj_dv,
             nullif(trim(fantasia), ''), cnae, nullif(trim(cnaes2), ''), uf, mun,
             nullif(trim(bairro), ''),
-            nullif(trim(concat_ws(' ', nullif(trim(tipo_logradouro), ''), nullif(trim(logradouro), ''))), ''),
+            nullif(trim(case when starts_with(upper(trim(logradouro)), upper(trim(tipo_logradouro)) || ' ')
+                             then trim(logradouro)
+                             else concat_ws(' ', nullif(trim(tipo_logradouro), ''), nullif(trim(logradouro), '')) end), ''),
             nullif(trim(numero), ''), nullif(trim(complemento), ''), nullif(trim(cep), ''),
             nullif(regexp_replace(coalesce(ddd1, '') || coalesce(tel1, ''), '[^0-9]', '', 'g'), ''),
             nullif(regexp_replace(coalesce(ddd2, '') || coalesce(tel2, ''), '[^0-9]', '', 'g'), ''),

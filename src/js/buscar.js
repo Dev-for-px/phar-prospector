@@ -27,7 +27,14 @@ window.PPBuscar = (function () {
     if (t.length === 10) return '(' + t.slice(0, 2) + ') ' + t.slice(2, 6) + '-' + t.slice(6);
     return t;
   }
-  function celular(t) { t = soNumeros(t); return t.length === 11 && t.charAt(2) === '9'; }
+  // celular: 11 números com 9 depois do DDD, ou o formato antigo de 10 números começando com 6 a 9
+  // (muito comum na Receita); para o WhatsApp, o formato antigo ganha o 9 na frente.
+  function whatsapp(t) {
+    t = soNumeros(t);
+    if (t.length === 11 && t.charAt(2) === '9') return t;
+    if (t.length === 10 && /[6-9]/.test(t.charAt(2))) return t.slice(0, 2) + '9' + t.slice(2);
+    return '';
+  }
   function dataIso(d) {
     if (!d) return '';
     if (typeof d === 'string') return d.slice(0, 10);
@@ -219,7 +226,7 @@ window.PPBuscar = (function () {
     var f = filtros();
     if (!f.cidades.length && !f.cnpj) { erro('Escolha pelo menos uma cidade (ou informe um CNPJ).'); return; }
     if (f.cnpj && !PP.docValido(f.cnpj)) { erro('Esse CNPJ não é válido. Confira os números.'); return; }
-    b.ocupado = true; $('bz-buscar').disabled = true;
+    b.ocupado = true; $('bz-buscar').disabled = true; $('bz-resultado').hidden = true;
     var inicioBytes = b.bytes, t0 = Date.now();
     status('Buscando…');
     var cidades = f.cidades;
@@ -321,8 +328,9 @@ window.PPBuscar = (function () {
       atualizarBotoes();
     });
     var tels = [l.tel1, l.tel2].filter(Boolean).map(function (t) {
-      return celular(t)
-        ? el('span', null, telFmt(t), ' · ', el('a', { href: 'https://wa.me/55' + soNumeros(t), target: '_blank', rel: 'noopener noreferrer', text: 'WhatsApp' }))
+      var w = whatsapp(t);
+      return w
+        ? el('span', null, telFmt(t), ' · ', el('a', { href: 'https://wa.me/55' + w, target: '_blank', rel: 'noopener noreferrer', text: 'WhatsApp' }))
         : el('span', { text: telFmt(t) });
     });
     var aberta = dataIso(l.abertura);
