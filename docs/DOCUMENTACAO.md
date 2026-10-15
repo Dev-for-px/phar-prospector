@@ -1,6 +1,6 @@
 # PHAR Prospector — documentação completa
 
-Atualizada em 9 de outubro de 2026.
+Atualizada em 15 de outubro de 2026.
 
 Este documento serve para duas coisas: entender como o sistema funciona hoje e **reconstruir tudo do zero** se alguma conta ou serviço for perdido. Ele fica em três lugares: no repositório do GitHub (`docs/DOCUMENTACAO.md`), dentro do kit de reconstrução (arquivo ZIP) e em PDF.
 
@@ -47,7 +47,7 @@ O que existe hoje:
 | O quê | Onde | Identificação |
 |---|---|---|
 | Site no ar | Vercel | https://phar-prospector.vercel.app |
-| Código-fonte | GitHub (repositório privado) | `pedrodadila/phar-prospector`, branch `main` |
+| Código-fonte | GitHub (repositório privado) | `Dev-for-px/phar-prospector`, branch `main` |
 | Banco de dados e login | Supabase | projeto `phar-prospector`, id `megkurlpjylmxjndynoo`, região São Paulo (`sa-east-1`), Postgres 17, plano gratuito |
 | Organização no Supabase | Supabase | id `punbqisnqxxeinmgscug` |
 | Endereço do banco para o site | Supabase | `https://megkurlpjylmxjndynoo.supabase.co` |
@@ -75,7 +75,7 @@ O sistema depende de quatro contas. Perder o Claude não derruba nada: o site co
 
 | Conta | Para que serve | Se perder |
 |---|---|---|
-| GitHub (`pedrodadila`) | Guarda o código. Cada envio para a `main` publica o site | O site continua no ar, mas não dá para mudar. Recupere a conta ou suba o código do kit em um repositório novo (parte 12) |
+| GitHub (organização `Dev-for-px`) | Guarda o código. Cada envio para a `main` publica o site | O site continua no ar, mas não dá para mudar. Recupere a conta ou suba o código do kit em um repositório novo (parte 12) |
 | Vercel | Publica o site | O endereço sai do ar. Crie outro projeto e importe o repositório (parte 12) |
 | Supabase | Banco e login | Login e dados somem. É a perda mais séria: recrie o banco e devolva os dados (partes 12 e 13) |
 | Google (dona da planilha) | Guarda o backup | O backup some. Crie outra planilha e instale o script de novo (parte 10) |
@@ -140,7 +140,8 @@ phar-prospector/
 ├── servidor-local.mjs        servidor para testar no computador
 ├── .gitignore                o que não vai para o GitHub (node_modules, dist, .env)
 ├── docs/
-│   └── DOCUMENTACAO.md       este documento
+│   ├── DOCUMENTACAO.md       este documento
+│   └── PLANO-PROSPECCAO.md   plano das próximas funções (busca de leads, qualificação, IA)
 ├── scripts/
 │   └── gerar-schema.mjs      junta as migrações em supabase/schema-completo.sql
 ├── backup/
@@ -402,7 +403,7 @@ Nada sai do ar. O código está no GitHub e este documento também. Para continu
 ### Cenário B — perdi a Vercel (o site saiu do ar)
 
 1. Crie uma conta na Vercel e clique em Add New > Project.
-2. Importe o repositório `pedrodadila/phar-prospector` do GitHub.
+2. Importe o repositório `Dev-for-px/phar-prospector` do GitHub.
 3. Não mude nenhuma configuração: o arquivo `vercel.json` já informa o comando de build e a pasta de saída. Framework Preset fica em "Other". Não há variáveis de ambiente.
 4. Clique em Deploy.
 5. Se o endereço mudar, atualize o Supabase: Authentication > URL Configuration, campos Site URL e Redirect URLs (veja o passo 6 do cenário D).
@@ -495,6 +496,8 @@ Fontes: [Supabase, Production Checklist](https://supabase.com/docs/guides/deploy
 
 ## 15. Pendências conhecidas
 
+- **Busca de leads, qualificação e IA.** Plano aprovado; prioridade é a busca na base da Receita (Fase 2), com Google Maps adiado. Ainda não implementado: `docs/PLANO-PROSPECCAO.md` (temperatura do lead, CNPJ na ficha, importar planilha, base da Receita, Google Maps, IA).
+- **Hospedagem comercial.** O plano gratuito da Vercel é só para uso não comercial; resolver antes de cobrar assinatura.
 - **Restaurar backup.** Falta um caminho pronto para devolver os contatos da planilha ao sistema (parte 13).
 - **Envio de e-mail próprio (SMTP).** Necessário antes de abrir para vários clientes (parte 14).
 - **Conferir a configuração de endereços do login** no Supabase (Site URL e Redirect URLs, cenário D, passo 6).
@@ -512,3 +515,6 @@ Fontes: [Supabase, Production Checklist](https://supabase.com/docs/guides/deploy
 | 9 out 2026 | `9be6f69` | Permissões por colaborador |
 | 9 out 2026 | `d1d55b3` | Documentação completa, banco em arquivo único e kit de reconstrução |
 | 9 out 2026 | logo depois de `d1d55b3` | Regra fixa: toda mudança atualiza a documentação (`CLAUDE.md`) |
+| 14 out 2026 | logo depois de `a704462` | Plano de busca de leads, qualificação e IA (`docs/PLANO-PROSPECCAO.md`) |
+| 15 out 2026 | — | Plano atualizado: base da Receita como motor de busca (Fase 2 detalhada), Google Maps adiado |
+| 15 out 2026 | — | Repositório transferido para a organização `Dev-for-px` no GitHub |
