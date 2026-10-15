@@ -86,4 +86,5 @@ Colunas do Parquet: `cnpj`, `fantasia`, `razao`, `cnae` (principal), `cnaes2` (s
 
 ## Números da primeira carga (outubro de 2026, MG)
 
-Preenchido depois da primeira execução: ver `docs/DOCUMENTACAO.md`, parte "Base da Receita".
+- 2.935.399 empresas ativas em MG; `uf=MG.parquet` com 152,4 MB.
+- Processamento: 2,5 minutos num Mac. Download dos zips: 20 a 40 minutos.

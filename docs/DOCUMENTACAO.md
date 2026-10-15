@@ -550,5 +550,5 @@ A base pública de CNPJ da Receita Federal é processada uma vez por mês em arq
 - **Como atualizar todo mês e como reconstruir:** passo a passo em `scripts/receita/README.md` (baixar, `processar.py`, `enviar.py`).
 - **Como a busca lê pouco:** o arquivo está ordenado por município e CNAE; `municipios.json` guarda a primeira linha e a quantidade de cada cidade. Com ramo só principal, a tela lê primeiro só a coluna de CNAE da cidade e depois só os trechos daquele ramo.
 - **Busca só por CNPJ:** a BrasilAPI diz a cidade do CNPJ (código de município da Receita) e a tela procura nessa cidade.
-- **Tamanho e tempo de MG:** anotados aqui depois da primeira carga.
+- **Primeira carga (base de outubro de 2026, MG):** 2.935.399 empresas ativas; `uf=MG.parquet` com 152,4 MB; processamento em 2,5 minutos num Mac (o download dos ~7 GB da Receita leva de 20 a 40 minutos).
 
