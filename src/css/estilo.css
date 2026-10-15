@@ -384,3 +384,30 @@ section.suave{background:var(--surface-soft)}
 .eq-perm-resumo{font-size:14px;line-height:20px;color:var(--ink-muted);margin-top:4px}
 .eq-editor{flex:1 1 100%;display:flex;flex-direction:column;gap:16px;background:var(--surface-soft);border:1px solid var(--line);border-radius:var(--radius-lg);padding:16px}
 @media (max-width:640px){.perms{grid-template-columns:1fr}}
+
+/* ---------- aba Buscar leads (js/buscar.js) ---------- */
+.bz-topo{display:flex;flex-wrap:wrap;gap:12px 32px;align-items:flex-start;justify-content:space-between}
+.bz-topo h2{font-size:20px;line-height:28px;font-weight:600}
+.bz-lgpd{max-width:420px;font-size:13px;line-height:18px;color:var(--ink-muted);padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft)}
+.bz-form{margin-top:20px;padding:20px;border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--surface-soft);display:flex;flex-direction:column;gap:16px}
+.bz-grid fieldset{border:0;margin:0;padding:0;min-width:0}
+.bz-escolhas:empty{display:none}
+.bz-escolhas{margin-top:8px}
+.bz-chip{min-height:32px;padding:0 10px;font-size:14px;background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.bz-chip:hover{background:var(--brand-hover)}
+.bz-rotulo{display:block;font-size:14px;font-weight:600;margin-bottom:6px}
+.bz-datas{display:flex;gap:8px;align-items:center}
+.bz-datas input{flex:1;min-width:0;height:44px;padding:0 10px;border:1px solid var(--line-strong);border-radius:var(--radius-md);background:var(--surface)}
+.bz-caixas{display:flex;flex-wrap:wrap;gap:4px 24px;align-items:center}
+.bz-barra{align-items:center;justify-content:space-between}
+.bz-barra .caixa{padding:0}
+.bz-linha{display:grid;grid-template-columns:32px minmax(0,3fr) minmax(0,1.4fr);gap:12px 16px;padding-block:14px;border-top:1px solid var(--line);align-items:start}
+.bz-linha.bz-ja{opacity:.7}
+.bz-marca input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--brand);cursor:pointer}
+.bz-nome{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.bz-nome .nome{cursor:default}
+.bz-mei{background:var(--warning-soft);color:var(--warning);border-color:var(--warning)}
+.bz-porte{background:var(--surface-tint);color:var(--ink-muted)}
+.bz-tag-ja{background:var(--success-soft);color:var(--success)}
+.bz-paginas{justify-content:center;margin-top:16px}
+@media (max-width:700px){.bz-linha{grid-template-columns:28px minmax(0,1fr)}.bz-contato{grid-column:2}.bz-form{padding:16px}}

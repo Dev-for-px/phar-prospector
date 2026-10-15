@@ -56,6 +56,7 @@
       <div class="abas-app" role="tablist" aria-label="Áreas do sistema">
         <button class="aba-app" type="button" role="tab" id="aba-painel" data-visao="painel" aria-selected="true" aria-controls="v-painel">Painel</button>
         <button class="aba-app" type="button" role="tab" id="aba-contatos" data-visao="contatos" aria-selected="false" aria-controls="v-contatos">Contatos</button>
+        <button class="aba-app" type="button" role="tab" id="aba-buscar" data-visao="buscar" aria-selected="false" aria-controls="v-buscar" hidden>Buscar leads</button>
         <button class="aba-app" type="button" role="tab" id="aba-equipe" data-visao="equipe" aria-selected="false" aria-controls="v-equipe">Equipe</button>
         <button class="aba-app" type="button" role="tab" id="aba-empresa" data-visao="empresa" aria-selected="false" aria-controls="v-empresa">Empresa</button>
       </div>
@@ -130,6 +131,89 @@
         <span>Contato</span><span>Cidade e telefone</span><span>Status</span><span>Próximo contato</span><span></span>
       </div>
       <div class="lista" id="lista"></div>
+    </section>
+
+    <!-- Buscar leads (código em js/buscar.js) -->
+    <section id="v-buscar" role="tabpanel" aria-labelledby="aba-buscar" hidden>
+      <div class="bz-topo">
+        <div>
+          <h2>Buscar empresas na base da Receita Federal</h2>
+          <p class="dica" id="bz-base">Carregando a base…</p>
+        </div>
+        <p class="bz-lgpd">Dados públicos da Receita Federal. Use para contato comercial individual, não para envio em massa. MEI é pessoa física: telefone e e-mail dele são dado pessoal.</p>
+      </div>
+      <div class="aviso aviso-erro" id="bz-erro" role="alert" hidden></div>
+
+      <form class="bz-form" id="bz-form" novalidate>
+        <div class="grid bz-grid">
+          <div class="campo">
+            <label for="bz-uf">Estado</label>
+            <select id="bz-uf"></select>
+          </div>
+          <div class="campo">
+            <label for="bz-cidade">Cidades</label>
+            <input type="search" id="bz-cidade" list="bz-cidades" autocomplete="off" placeholder="Digite e escolha; pode escolher várias">
+            <datalist id="bz-cidades"></datalist>
+            <div class="chips bz-escolhas" id="bz-cidades-escolhidas" aria-live="polite"></div>
+          </div>
+          <div class="campo col-2">
+            <label for="bz-ramo">Ramo (CNAE)</label>
+            <input type="search" id="bz-ramo" list="bz-ramos" autocomplete="off" placeholder="Código ou nome da atividade, ex.: academia, 8650-0/04, dentista">
+            <datalist id="bz-ramos"></datalist>
+            <div class="chips bz-escolhas" id="bz-ramos-escolhidos" aria-live="polite"></div>
+            <label class="caixa"><input type="checkbox" id="bz-secundario"> <span>Incluir quem tem esse ramo como atividade secundária</span></label>
+          </div>
+          <div class="campo">
+            <label for="bz-nome">Nome, razão social ou fantasia</label>
+            <input type="search" id="bz-nome" autocomplete="off" placeholder="Parte do nome">
+          </div>
+          <div class="campo">
+            <label for="bz-cnpj">CNPJ</label>
+            <input type="search" id="bz-cnpj" autocomplete="off" placeholder="00.000.000/0000-00" aria-describedby="bz-cnpj-dica">
+            <p class="dica" id="bz-cnpj-dica">Com CNPJ, a cidade não é obrigatória.</p>
+          </div>
+          <div class="campo">
+            <label for="bz-bairro">Bairro</label>
+            <input type="search" id="bz-bairro" autocomplete="off" placeholder="Parte do nome do bairro">
+          </div>
+          <div class="campo">
+            <span class="bz-rotulo">Aberta entre</span>
+            <div class="bz-datas">
+              <input type="date" id="bz-de" aria-label="Aberta a partir de">
+              <span>e</span>
+              <input type="date" id="bz-ate" aria-label="Aberta até">
+            </div>
+          </div>
+          <fieldset class="campo col-2">
+            <legend>Porte</legend>
+            <div class="chips" id="bz-portes"></div>
+          </fieldset>
+          <div class="campo col-2 bz-caixas">
+            <label class="caixa"><input type="checkbox" id="bz-tel"> <span>Só com telefone</span></label>
+            <label class="caixa"><input type="checkbox" id="bz-email"> <span>Só com e-mail</span></label>
+            <span class="dica">Situação: só empresas ativas (a base guarda só as ativas).</span>
+          </div>
+        </div>
+        <div class="acoes">
+          <button class="btn btn-primary" type="submit" id="bz-buscar">Buscar</button>
+          <button class="linkbtn" type="button" id="bz-limpar">Limpar filtros</button>
+          <span class="dica" id="bz-status" aria-live="polite"></span>
+        </div>
+      </form>
+
+      <div id="bz-resultado" hidden>
+        <div class="resumo bz-barra">
+          <span id="bz-contagem"></span>
+          <label class="caixa"><input type="checkbox" id="bz-todos"> <span>Marcar todos desta página</span></label>
+          <button class="btn btn-accent btn-sm" type="button" id="bz-adicionar" disabled>Adicionar à minha lista</button>
+        </div>
+        <div class="lista bz-lista" id="bz-lista"></div>
+        <div class="acoes bz-paginas" id="bz-paginas">
+          <button class="btn btn-sec btn-sm" type="button" id="bz-anterior">Anterior</button>
+          <span id="bz-pagina"></span>
+          <button class="btn btn-sec btn-sm" type="button" id="bz-proxima">Próxima</button>
+        </div>
+      </div>
     </section>
 
     <!-- Equipe -->
@@ -439,6 +523,8 @@
 <script src="/js/config.js"></script>
 <script src="/js/comum.js"></script>
 <script src="/js/graficos.js"></script>
+<script src="/vendor/parquet.js"></script>
+<script src="/js/buscar.js"></script>
 <script src="/js/app.js"></script>
 </body>
 </html>

@@ -18,7 +18,7 @@
   ];
   var UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
   var CAMPOS_TEXTO = ['empresa', 'contato', 'cargo', 'telefone', 'email', 'cidade', 'uf', 'segmento', 'porte', 'origem', 'link', 'interesse'];
-  var VISOES = ['painel', 'contatos', 'equipe', 'empresa'];
+  var VISOES = ['painel', 'contatos', 'buscar', 'equipe', 'empresa'];
   var CAMPOS_EMP = ['nome', 'razao_social', 'documento', 'segmento', 'telefone', 'email', 'site', 'instagram', 'descricao', 'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf'];
 
   // permissões que o responsável marca para cada colaborador (as mesmas chaves do banco)
@@ -30,11 +30,12 @@
       ['ver_empresa', 'Dados da empresa (CNPJ, endereço)']] },
     { grupo: 'O que pode fazer', itens: [
       ['criar', 'Cadastrar contatos'],
+      ['buscar_leads', 'Buscar leads na base da Receita', 'Para adicionar os achados à lista, precisa também de "Cadastrar contatos".'],
       ['editar', 'Editar contatos e registrar conversas'],
       ['excluir', 'Excluir contatos'],
       ['exportar', 'Baixar a planilha de contatos (CSV)']] }
   ];
-  var PERM_PADRAO = { ver_painel: true, ver_todos: true, ver_equipe: true, ver_empresa: true, criar: true, editar: true, excluir: false, exportar: false };
+  var PERM_PADRAO = { ver_painel: true, ver_todos: true, ver_equipe: true, ver_empresa: true, criar: true, editar: true, excluir: false, exportar: false, buscar_leads: true };
 
   var st = {
     items: [], modo: 'carregando', visao: 'painel', filtro: 'todos', q: '', status: '', ordem: 'proximo',
@@ -85,7 +86,8 @@
   function paraApp(r) {
     var p = { id: r.id, status: r.status, proximoContato: r.proximo_contato || '', ultimoContato: r.ultimo_contato || '',
       observacoes: r.observacoes || '', historico: Array.isArray(r.historico) ? r.historico : [],
-      criadoEm: r.criado_em || '', userId: r.user_id || '' };
+      criadoEm: r.criado_em || '', userId: r.user_id || '',
+      cnpj: r.cnpj || '', razaoSocial: r.razao_social || '', cnae: r.cnae || '', endereco: r.endereco || '', abertura: r.abertura || '' };
     CAMPOS_TEXTO.forEach(function (k) { p[k] = r[k] || ''; });
     return p;
   }
@@ -119,7 +121,7 @@
       if (st.filtro === 'sem' && !(k === 'sem' && ativo(p))) return false;
       if (st.status && p.status !== st.status) return false;
       if (q) {
-        var alvo = semAcento([p.empresa, p.contato, p.cidade, p.uf, p.segmento, p.telefone, p.email, p.interesse, p.observacoes].join(' '));
+        var alvo = semAcento([p.empresa, p.contato, p.cidade, p.uf, p.segmento, p.telefone, p.email, p.interesse, p.observacoes, p.razaoSocial, p.cnpj].join(' '));
         var tel = String(p.telefone || '').replace(/\D/g, '');
         if (alvo.indexOf(q) === -1 && !(qd.length >= 3 && tel.indexOf(qd) !== -1)) return false;
       }
@@ -229,6 +231,7 @@
     if (st.visao === 'painel') { renderPainel(hj); return; }
     if (st.visao === 'equipe') { renderEquipe(); return; }
     if (st.visao === 'empresa') return;
+    if (st.visao === 'buscar') return;
 
     lista.replaceChildren();
     lista.removeAttribute('role');
@@ -257,14 +260,20 @@
   }
   function limpar() { st.filtro = 'todos'; st.status = ''; st.q = ''; $('q').value = ''; $('filtro-status').value = ''; render(); }
   function visaoLiberada(v) {
-    return v === 'contatos' || (v === 'painel' && pode('ver_painel')) || (v === 'equipe' && pode('ver_equipe')) || (v === 'empresa' && pode('ver_empresa'));
+    return v === 'contatos' || (v === 'painel' && pode('ver_painel')) || (v === 'buscar' && pode('buscar_leads') && !!window.PPBuscar && (!!PP.cfg.receita || !!(st.usuario && st.usuario.is_admin))) || (v === 'equipe' && pode('ver_equipe')) || (v === 'empresa' && pode('ver_empresa'));
   }
   function visaoInicial(v) { return VISOES.indexOf(v) !== -1 && visaoLiberada(v) ? v : (pode('ver_painel') ? 'painel' : 'contatos'); }
   function irVisao(v) {
     st.visao = visaoInicial(v);
     try { history.replaceState(null, '', st.visao === 'painel' ? window.location.pathname : '#' + st.visao); } catch (e) { /* sem histórico */ }
     if (st.visao === 'equipe' && !st.equipe) carregarEquipe();
+    if (st.visao === 'buscar') abrirBusca();
     render();
+  }
+
+  // ---------- buscar leads (código em buscar.js) ----------
+  function abrirBusca() {
+    window.PPBuscar.abrir({ pode: pode, msgErro: msgErro, recarregar: iniciarLista });
   }
 
   // ---------- ficha ----------
@@ -298,6 +307,8 @@
       if (site) rap.append(el('a', { href: site, target: '_blank', rel: 'noopener noreferrer', text: 'Abrir site ou Instagram' }));
       if (p.ultimoContato) rap.append(el('span', { text: 'Último contato: ' + dataCurta(p.ultimoContato) }));
       if (autor) rap.append(el('span', { text: 'Cadastrado por ' + autor }));
+      if (p.cnpj) rap.append(el('span', { text: 'CNPJ ' + PP.docFormatado(p.cnpj) + (p.razaoSocial && p.razaoSocial !== p.empresa ? ' · ' + p.razaoSocial : '') }));
+      if (p.endereco) rap.append(el('span', { text: p.endereco }));
     }
     rap.hidden = !rap.childNodes.length;
 
@@ -467,6 +478,7 @@
     if (v.editar) faz.push('editar');
     if (v.excluir) faz.push('excluir');
     if (v.exportar) faz.push('baixar a planilha');
+    if (v.buscar_leads) faz.push('buscar leads');
     function lista(a) { return a.length > 1 ? a.slice(0, -1).join(', ') + ' e ' + a[a.length - 1] : a[0]; }
     return 'Vê ' + lista(ve) + '. ' + (faz.length ? 'Pode ' + lista(faz) + '.' : 'Não altera nada.');
   }
@@ -651,6 +663,7 @@
         $('simulando-nome').textContent = emp.nome;
         var inicial = (window.location.hash || '').replace('#', '');
         st.visao = visaoInicial(inicial);
+        if (st.visao === 'buscar') abrirBusca();
         tela('app'); preencherEmpresa(); iniciarLista(); carregarEquipe();
         if (pode('ver_empresa')) carregarEmpresa();
       });

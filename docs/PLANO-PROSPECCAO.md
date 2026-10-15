@@ -1,6 +1,6 @@
 # Plano: busca de leads, qualificação e IA no PHAR Prospector
 
-Criado em 14 de outubro de 2026, atualizado em 15 de outubro de 2026. Status: **aprovado; prioridade atual é a Fase 2 (base da Receita). Nada implementado ainda.**
+Criado em 14 de outubro de 2026, atualizado em 15 de outubro de 2026. Status: **Fase 2 (base da Receita) implementada, só MG. Próximo: Google Maps (Fase 3, refeita a pedido do Pedro) e "Uso e limpeza" no /admin.**
 
 Origem: reunião de apresentação do sistema, em que pediram busca de empresas por região (Google Maps), dados completos do cliente, base de CNPJ da Receita filtrada por cidade, região e CNAE, qualificação quente, morno e frio, observação com IA e importação de leads.
 
@@ -114,7 +114,7 @@ Parquet só com empresas ATIVAS e só as colunas usadas
    + índices pequenos em JSON (municípios por UF, lista de CNAEs)
    │  upload
    ▼
-Cloudflare R2 (bucket público, leitura por faixa de bytes)
+Hugging Face Datasets (público, gratuito, sem cartão; leitura por faixa de bytes)
    │  o navegador lê só os pedaços do município buscado
    ▼
 Aba Buscar no site  ──"Adicionar à lista"──▶  Supabase (tabela prospects, como hoje)
@@ -122,7 +122,7 @@ Aba Buscar no site  ──"Adicionar à lista"──▶  Supabase (tabela prospe
 
 - **Nada da base vai para o Supabase.** Só os contatos que a pessoa escolher adicionar (economia do plano gratuito).
 - **Sem servidor e sem função paga.** A busca roda no navegador, lendo o Parquet direto do R2.
-- **Conferir antes de começar:** limites do plano gratuito do Cloudflare R2 (armazenamento e se a saída de dados é gratuita) e se o tamanho final cabe. Se não couber, alternativa: Hugging Face Datasets.
+- **Decidido em 15 out 2026:** o Cloudflare R2 pede cartão para ativar (mesmo no gratuito), então a base foi para o **Hugging Face Datasets** (público, gratuito, sem cartão, aceita leitura por faixa de bytes e chamada do navegador). Cobertura nesta fase: **só MG**, um arquivo por UF; acrescentar UF = rodar o script de novo com a sigla.
 
 ### [ ] 2.1 Script de processamento mensal (`scripts/receita/`)
 
@@ -233,5 +233,5 @@ Quando for retomar:
 1. Confirmar ou ajustar a regra de quente, morno e frio (item 1.1).
 2. ~~Onde guardar a base da Receita~~: decidido Cloudflare R2, conferir limites no item 2.1.
 3. Criar a conta do Google Cloud com cartão (Fase 3, adiada).
-5. Criar o bucket no Cloudflare R2 e a chave de acesso (item 2.1). A chave fica só no computador de quem roda o script.
+5. ~~Criar o bucket no Cloudflare R2~~: trocado por conta gratuita no Hugging Face e token de escrita (item 2.1). O token fica só no computador de quem roda o script.
 4. Vercel Pro ou outra hospedagem, antes de cobrar assinatura.

@@ -24,6 +24,7 @@ Não há senhas neste documento. As senhas ficam só com você (parte 3).
 14. Limites do plano gratuito
 15. Pendências conhecidas
 16. Histórico
+17. Base da Receita (aba Buscar leads)
 
 ---
 
@@ -36,7 +37,8 @@ O PHAR Prospector é um controle de prospecção com retorno programado. Cada em
 O que existe hoje:
 
 - Página pública de apresentação, com entrar e criar conta.
-- Sistema com quatro abas: Painel (gráficos), Contatos, Equipe e Empresa.
+- Sistema com cinco abas: Painel (gráficos), Contatos, Buscar leads, Equipe e Empresa.
+- Busca de empresas na base pública da Receita Federal (hoje só MG), com "Adicionar à minha lista".
 - Várias pessoas por empresa, com permissões marcadas pelo responsável.
 - Cadastro completo da empresa (CNPJ ou CPF, contatos e endereço).
 - Painel administrativo do dono do sistema: libera, bloqueia, simula o acesso de uma empresa e baixa backup.
@@ -56,6 +58,7 @@ O que existe hoje:
 | Script do backup | Dentro da planilha (Extensões > Apps Script) | cópia em `backup/google-planilhas.gs` |
 | Conta administradora do sistema | Login do próprio sistema | pedrodadila@gmail.com |
 | Documentação do projeto no Claude | Projeto "PHAR Consultoria" | `claude/phar-prospector-sistema.md` |
+| Base da Receita (Parquet) | Hugging Face, conjunto de dados público | `HF_REPO` (a criar pelo Pedro; ver parte 17). Endereço lido pelo site em `src/js/config.js`, campo `receita` |
 
 A chave pública pode aparecer aqui e no código: ela foi feita para ficar no navegador. Quem protege os dados são as regras do banco (parte 9).
 
@@ -66,12 +69,12 @@ Endereços do site:
 | `/` | Página principal, aberta a todos |
 | `/entrar` | Entrar, criar conta, recuperar senha |
 | `/entrar?modo=criar` | Abre direto no cadastro (é o link que o responsável manda para o colaborador) |
-| `/app` | O sistema. `/app#contatos`, `/app#equipe` e `/app#empresa` abrem direto na aba |
+| `/app` | O sistema. `/app#contatos`, `/app#buscar`, `/app#equipe` e `/app#empresa` abrem direto na aba |
 | `/admin` | Painel administrativo |
 
 ## 3. Contas e acessos
 
-O sistema depende de quatro contas. Perder o Claude não derruba nada: o site continua no ar, porque roda em GitHub, Vercel e Supabase.
+O sistema depende de quatro contas, mais a do Hugging Face para a base da Receita. Perder o Claude não derruba nada: o site continua no ar, porque roda em GitHub, Vercel e Supabase.
 
 | Conta | Para que serve | Se perder |
 |---|---|---|
@@ -79,6 +82,7 @@ O sistema depende de quatro contas. Perder o Claude não derruba nada: o site co
 | Vercel | Publica o site | O endereço sai do ar. Crie outro projeto e importe o repositório (parte 12) |
 | Supabase | Banco e login | Login e dados somem. É a perda mais séria: recrie o banco e devolva os dados (partes 12 e 13) |
 | Google (dona da planilha) | Guarda o backup | O backup some. Crie outra planilha e instale o script de novo (parte 10) |
+| Hugging Face | Guarda a base da Receita em Parquet (pública, gratuita, sem cartão) | Só a aba Buscar leads para. Crie outra conta, rode o script de novo e troque o endereço em `config.js` (parte 17) |
 
 O que guardar em um gerenciador de senhas (1Password, Bitwarden ou o do Google):
 
@@ -109,6 +113,7 @@ Regras que valem sempre:
 - O site é feito de páginas simples (HTML, CSS e JavaScript), sem servidor próprio. Tudo o que precisa de regra roda no banco.
 - O navegador fala direto com o Supabase usando a chave pública. Cada pedido leva o login da pessoa, e o banco decide o que ela pode ver.
 - Não há chave secreta em lugar nenhum do site.
+- A aba Buscar leads lê a base da Receita direto do Hugging Face (arquivos públicos, leitura por pedaços). Só os contatos que a pessoa adiciona vão para o Supabase.
 
 ## 5. As páginas
 
@@ -119,7 +124,8 @@ Regras que valem sempre:
 **Sistema (`/app`)**:
 
 - **Painel**: rosca com os contatos por status, linha com o crescimento da base e a lista "Para falar hoje". Para o responsável, mostra o aviso "Complete o cadastro da empresa" enquanto faltar dado.
-- **Contatos**: lista com busca, filtro por status, ordenação e os quatro números do topo (atrasados, hoje, próximos 7 dias, sem retorno). Cada contato tem ficha, histórico e o botão "Registrar contato".
+- **Contatos**: lista com busca, filtro por status, ordenação e os quatro números do topo (atrasados, hoje, próximos 7 dias, sem retorno). Cada contato tem ficha, histórico e o botão "Registrar contato". Contatos vindos da Receita mostram CNPJ, razão social e endereço na ficha.
+- **Buscar leads**: busca empresas na base da Receita por estado, cidades (várias), ramo (CNAE principal ou também secundário), nome, CNPJ, bairro, porte (MEI, ME, EPP, demais), data de abertura, só com telefone e só com e-mail. Resultado em páginas de 50, com contagem total, selo MEI e "Já na lista". O vendedor marca as empresas e clica em "Adicionar à minha lista": elas viram contatos "A contatar", origem "Base da Receita", sem duplicar CNPJ. Só aparece para quem tem a permissão `buscar_leads` (e, enquanto a base não estiver publicada, só para o administrador). Detalhes na parte 17.
 - **Equipe**: quem usa a conta. O responsável adiciona colaboradores pelo e-mail e marca as permissões nas caixinhas.
 - **Empresa**: cadastro completo da empresa. Só o responsável altera.
 
@@ -137,13 +143,15 @@ phar-prospector/
 ├── package-lock.json         versões exatas das dependências
 ├── build.mjs                 monta a pasta dist/ e minifica JS e CSS
 ├── vercel.json               configuração da Vercel: build, endereços limpos e cabeçalhos de segurança
-├── servidor-local.mjs        servidor para testar no computador
+├── servidor-local.mjs        servidor para testar no computador (com RECEITA_DIR, serve também a base da Receita local)
 ├── .gitignore                o que não vai para o GitHub (node_modules, dist, .env)
 ├── docs/
 │   ├── DOCUMENTACAO.md       este documento
 │   └── PLANO-PROSPECCAO.md   plano das próximas funções (busca de leads, qualificação, IA)
 ├── scripts/
-│   └── gerar-schema.mjs      junta as migrações em supabase/schema-completo.sql
+│   ├── gerar-schema.mjs      junta as migrações em supabase/schema-completo.sql
+│   ├── parquet-entrada.js    entrada do pacote vendor/parquet.js (leitor de Parquet do navegador)
+│   └── receita/              base da Receita: processar.py, enviar.py, requirements.txt e README.md (parte 17)
 ├── backup/
 │   └── google-planilhas.gs   script do backup no Google Planilhas
 ├── supabase/
@@ -161,14 +169,15 @@ phar-prospector/
         ├── comum.js          conexão, sessão, datas, CPF e CNPJ; usado por todas as páginas
         ├── entrar.js         tela de entrar
         ├── app.js            o sistema (painel, contatos, equipe, empresa)
+        ├── buscar.js         aba Buscar leads (lê a base da Receita e adiciona à lista)
         ├── admin.js          painel administrativo
         ├── graficos.js       gráficos de rosca e de linha, sem biblioteca externa
         └── grade.js          desenho da grade de pontos da marca
 ```
 
-Dependências (só duas): `@supabase/supabase-js` 2.45.4, que conversa com o banco, e `esbuild` 0.23.1, que minifica o código no build. Não há framework.
+Dependências: `@supabase/supabase-js` 2.45.4, que conversa com o banco; `hyparquet` 1.31.2 e `fzstd` 0.1.1, que leem e descompactam a base da Receita no navegador (JavaScript puro, sem WebAssembly); e `esbuild` 0.23.1, que minifica o código no build. Não há framework.
 
-O que o `build.mjs` faz: copia `src/` para `dist/`, copia a biblioteca do Supabase para `dist/vendor/` e minifica os arquivos de `js/` e `css/`. O site publicado recebe o código minificado; o código legível fica só no repositório privado.
+O que o `build.mjs` faz: copia `src/` para `dist/`, copia a biblioteca do Supabase para `dist/vendor/`, monta `dist/vendor/parquet.js` (hyparquet + fzstd, ~62 KB) e minifica os arquivos de `js/` e `css/`. O site publicado recebe o código minificado; o código legível fica só no repositório privado.
 
 As migrações, na ordem:
 
@@ -181,6 +190,7 @@ As migrações, na ordem:
 | `20261009180200_limpeza.sql` | Remoção do que sobrou da primeira versão |
 | `20261009190000_dados_da_empresa.sql` | Cadastro completo da empresa |
 | `20261009200000_permissoes_da_equipe.sql` | Permissões por colaborador |
+| `20261015160000_busca_receita.sql` | Colunas de CNPJ no contato, CNPJ único por empresa, permissão `buscar_leads` e as funções da aba Buscar leads |
 
 ## 7. O banco de dados
 
@@ -227,6 +237,9 @@ O banco tem dois grupos de objetos. O grupo `public` é o que o site alcança. O
 | `status` | `novo`, `contatado`, `conversa`, `diagnostico`, `proposta`, `depois`, `cliente` ou `perdido` |
 | `proximo_contato`, `ultimo_contato` | datas do retorno marcado e da última conversa |
 | `observacoes` | texto livre, até 4.000 letras |
+| `cnpj` | CNPJ só com letras e números (14 posições) ou vazio. O mesmo CNPJ não entra duas vezes na mesma empresa (índice único `prospects_empresa_cnpj_uidx`) |
+| `razao_social`, `cnae`, `situacao`, `abertura`, `porte_receita` | dados da Receita: razão social, CNAE principal, situação, data de abertura e porte (MEI, ME, EPP, DEMAIS) |
+| `endereco` | endereço em uma linha (logradouro, número, complemento, bairro, cidade e CEP) |
 | `historico` | lista das conversas (data, canal, anotação, status, quem registrou), até 200 itens |
 | `criado_em`, `atualizado_em` | datas, sempre definidas pelo banco |
 
@@ -259,8 +272,10 @@ Todas exigem login. Cada uma confere, dentro do banco, se quem chamou tem permis
 | `admin_simular(alvo)` | administrador | Entra no modo simular de uma empresa; sem `alvo`, sai |
 | `admin_painel()` | administrador | Números para os gráficos do painel administrativo |
 | `admin_exportar()` | administrador | Todos os dados de todas as empresas, para o backup |
+| `prospects_cnpjs_existentes(p_cnpjs)` | quem tem `buscar_leads` | Diz quais destes CNPJs já estão na lista da empresa (só os CNPJs, nenhum outro dado), para marcar "Já na lista". Até 1.000 por vez |
+| `prospects_adicionar_lote(p_linhas)` | quem tem `buscar_leads` e `criar` | Adiciona até 200 empresas de uma vez como contatos "A contatar". Roda com o login de quem chamou, então valem as regras da tabela e o limite de 10 mil. CNPJ repetido é pulado e contado |
 
-Os contatos não passam por função: o site lê e grava direto na tabela `prospects`, e as regras da tabela decidem o que cada pessoa alcança. O cadastro da empresa é lido direto da tabela `empresas`.
+Os contatos não passam por função (exceto a adição em lote da aba Buscar leads): o site lê e grava direto na tabela `prospects`, e as regras da tabela decidem o que cada pessoa alcança. O cadastro da empresa é lido direto da tabela `empresas`.
 
 Funções de apoio (grupo `private`): `minha_empresa()`, `conta_ativa()`, `sou_dono()`, `em_simulacao()`, `is_admin()`, `pode(chave)`, `permissoes_padrao()`, `permissoes_limpas()`, `empresa_completa()`, `nome_empresa_padrao()`. `equipe_convidar(p_email)` continua existindo, mas só é chamada por dentro de `equipe_autorizar`.
 
@@ -301,6 +316,7 @@ Há três papéis.
 | Editar contatos e registrar conversas | `editar` | marcada | no banco |
 | Excluir contatos | `excluir` | desmarcada | no banco |
 | Baixar a planilha de contatos (CSV) | `exportar` | desmarcada | só na tela |
+| Buscar leads na base da Receita | `buscar_leads` | marcada | no banco (as duas funções da busca conferem). Para adicionar à lista precisa também de `criar` |
 
 "Só na tela" quer dizer que o sistema esconde a aba ou o botão, mas não é uma trava de dados. Quem enxerga os contatos na tela ainda consegue copiá-los à mão. A trava de verdade é "ver os contatos de toda a equipe".
 
@@ -313,7 +329,7 @@ Ciclo de uma empresa: nasce **pendente** quando alguém cria conta, fica **ativa
 - **Separação entre empresas no banco.** Cada tabela tem regras (RLS) que o banco aplica em todo pedido. Mesmo que alguém altere o site no próprio navegador, não alcança dados de outra empresa.
 - **Permissões conferidas no banco.** Ver todos os contatos, cadastrar, editar, excluir, ver equipe e ver dados da empresa são decididos pelo banco, não pela tela.
 - **Sem chave secreta no site.** O navegador usa só a chave pública.
-- **Cabeçalhos de segurança** em `vercel.json`: o site só carrega scripts dele mesmo, só se conecta ao próprio Supabase e não pode ser aberto dentro de outra página. Por causa disso, não se usa `style=` nem `<script>` solto dentro do HTML.
+- **Cabeçalhos de segurança** em `vercel.json`: o site só carrega scripts dele mesmo, só se conecta ao próprio Supabase, ao Hugging Face (`huggingface.co` e `*.hf.co`, base da Receita) e à BrasilAPI (consulta de um CNPJ na aba Buscar leads), e não pode ser aberto dentro de outra página. Por causa disso, não se usa `style=` nem `<script>` solto dentro do HTML.
 - **Código minificado.** Dificulta a leitura, mas não é o que protege o sistema. Código que roda no navegador sempre pode ser lido. O que impede a cópia do negócio são o repositório privado e as regras no banco.
 - **Páginas com login não são indexadas** pelo Google (`noindex`) e não ficam guardadas em cache.
 
@@ -322,7 +338,7 @@ Avisos que o Supabase mostra e que são esperados:
 - "Signed-In Users Can Execute SECURITY DEFINER Function": as funções do site rodam com poder elevado de propósito, e cada uma confere a permissão por dentro.
 - "Leaked Password Protection Disabled": a checagem de senhas vazadas está desligada. Vale ligar em Authentication > Sign In / Providers > Email quando o plano permitir.
 
-Como as regras foram testadas: em cada mudança de banco, um teste cria usuários de mentira, tenta cada ação permitida e proibida e desfaz tudo no fim. Na versão atual foram 22 verificações de permissão no banco real e 28 no banco de teste, todas aprovadas. A regra de excluir contatos foi testada só no banco de teste, porque a ferramenta usada bloqueia comandos de exclusão no banco real.
+Como as regras foram testadas: em cada mudança de banco, um teste cria usuários de mentira, tenta cada ação permitida e proibida e desfaz tudo no fim. Na versão atual foram 22 verificações de permissão no banco real e 28 no banco de teste, todas aprovadas. Na migração da busca na Receita (15 out 2026), mais 11 verificações no banco real: CNPJ repetido pulado, CNPJ inválido barrado, empresa não enxerga CNPJ de outra, sem `buscar_leads` barrado, sem `criar` barrado; tudo desfeito no fim. A regra de excluir contatos foi testada só no banco de teste, porque a ferramenta usada bloqueia comandos de exclusão no banco real.
 
 ## 10. Backup
 
@@ -390,7 +406,7 @@ npm install
 npm run dev
 ```
 
-Depois abra http://localhost:5173. O site local usa o mesmo banco do site publicado.
+Depois abra http://localhost:5173. O site local usa o mesmo banco do site publicado. Para testar a aba Buscar leads com uma base gerada no computador: `RECEITA_DIR=pasta-de-saida npm run dev` (parte 17).
 
 ## 12. Reconstruir do zero
 
@@ -455,7 +471,7 @@ update public.empresas set status = 'ativa', liberado_em = now()
 
 ### Cenário E — perdi tudo
 
-Faça nesta ordem: C (GitHub), D (Supabase), B (Vercel) e depois a parte 10 (planilha de backup).
+Faça nesta ordem: C (GitHub), D (Supabase), B (Vercel), depois a parte 10 (planilha de backup) e a parte 17 (base da Receita).
 
 ### Como saber que deu certo
 
@@ -490,13 +506,16 @@ Conferido na documentação do Supabase em 9 de outubro de 2026. Estes números 
 - **E-mails de confirmação.** O serviço de e-mail embutido do Supabase envia só 2 mensagens por hora, pode recusar endereços que não são da equipe do projeto e não é indicado para produção. Antes de vender para vários clientes, configure um envio próprio (SMTP) nas configurações de e-mail da área Authentication.
 - **Backups do banco.** No plano gratuito os backups automáticos não podem ser baixados. Por isso existe a planilha.
 
-Para economizar, o sistema não usa tempo real, armazenamento de arquivos nem funções pagas, e o backup roda uma vez por dia.
+Para economizar, o sistema não usa tempo real, armazenamento de arquivos nem funções pagas, e o backup roda uma vez por dia. A base da Receita fica fora do Supabase (parte 17).
+
+**Hugging Face (base da Receita).** Conjunto de dados público é gratuito e não pede cartão. O Cloudflare R2, previsto no plano, foi trocado porque pede cartão para ativar mesmo no plano gratuito (decisão do Pedro em 15 out 2026).
 
 Fontes: [Supabase, Production Checklist](https://supabase.com/docs/guides/deployment/going-into-prod) e [Supabase, Send emails with custom SMTP](https://supabase.com/docs/guides/auth/auth-smtp).
 
 ## 15. Pendências conhecidas
 
-- **Busca de leads, qualificação e IA.** Plano aprovado; prioridade é a busca na base da Receita (Fase 2), com Google Maps adiado. Ainda não implementado: `docs/PLANO-PROSPECCAO.md` (temperatura do lead, CNPJ na ficha, importar planilha, base da Receita, Google Maps, IA).
+- **Busca de leads.** Busca na base da Receita no ar (só MG, parte 17). Próximos passos pedidos pelo Pedro: busca no Google Maps (raspador no GitHub Actions, com OpenStreetMap de reserva) e seção "Uso e limpeza" no `/admin`. Ainda não feitos do plano: temperatura do lead, importar planilha, status "Não quer contato", IA (`docs/PLANO-PROSPECCAO.md`).
+- **Base da Receita: atualização mensal manual.** Rodar `scripts/receita/` todo mês (parte 17). Acrescentar UFs além de MG quando sair do teste.
 - **Hospedagem comercial.** O plano gratuito da Vercel é só para uso não comercial; resolver antes de cobrar assinatura.
 - **Restaurar backup.** Falta um caminho pronto para devolver os contatos da planilha ao sistema (parte 13).
 - **Envio de e-mail próprio (SMTP).** Necessário antes de abrir para vários clientes (parte 14).
@@ -518,3 +537,17 @@ Fontes: [Supabase, Production Checklist](https://supabase.com/docs/guides/deploy
 | 14 out 2026 | logo depois de `a704462` | Plano de busca de leads, qualificação e IA (`docs/PLANO-PROSPECCAO.md`) |
 | 15 out 2026 | — | Plano atualizado: base da Receita como motor de busca (Fase 2 detalhada), Google Maps adiado |
 | 15 out 2026 | — | Repositório transferido para a organização `Dev-for-px` no GitHub |
+| 15 out 2026 | este envio | Aba Buscar leads (base da Receita, só MG): migração `busca_receita`, permissão `buscar_leads`, leitor de Parquet no navegador, script mensal em `scripts/receita/`. Enquanto a base não é publicada no Hugging Face, a aba aparece só para o administrador |
+
+## 17. Base da Receita (aba Buscar leads)
+
+A base pública de CNPJ da Receita Federal é processada uma vez por mês em arquivos Parquet e publicada num conjunto de dados público e gratuito do Hugging Face. O navegador lê só o pedaço da cidade buscada; nada da base passa pelo Supabase.
+
+- **Cobertura:** só MG nesta fase. Um arquivo por UF; acrescentar UF = rodar o script de novo com a sigla.
+- **Onde fica:** `receita/atual.json`, `receita/AAAA-MM/uf=MG.parquet`, `municipios.json` e `cnaes.json` no conjunto de dados do Hugging Face. O endereço vai em `src/js/config.js`, campo `receita`.
+- **Origem dos dados:** https://arquivos.receitafederal.gov.br (Dados > Cadastros > CNPJ > AAAA-MM).
+- **Como atualizar todo mês e como reconstruir:** passo a passo em `scripts/receita/README.md` (baixar, `processar.py`, `enviar.py`).
+- **Como a busca lê pouco:** o arquivo está ordenado por município e CNAE; `municipios.json` guarda a primeira linha e a quantidade de cada cidade. Com ramo só principal, a tela lê primeiro só a coluna de CNAE da cidade e depois só os trechos daquele ramo.
+- **Busca só por CNPJ:** a BrasilAPI diz a cidade do CNPJ (código de município da Receita) e a tela procura nessa cidade.
+- **Tamanho e tempo de MG:** anotados aqui depois da primeira carga.
+

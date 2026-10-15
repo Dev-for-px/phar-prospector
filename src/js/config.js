@@ -4,5 +4,8 @@
 window.PP_CONFIG = {
   nome: 'PHAR Prospector',
   url: 'https://megkurlpjylmxjndynoo.supabase.co',
-  chave: 'sb_publishable_Ete35T600mQmtXi-S4IEhw_jLunudad'
+  chave: 'sb_publishable_Ete35T600mQmtXi-S4IEhw_jLunudad',
+  // Base pública da Receita (Parquet no Hugging Face), lida pela aba Buscar leads. Vazio = ainda não publicada.
+  // No computador (npm run dev com RECEITA_DIR) a base vem do servidor local.
+  receita: window.location.hostname === 'localhost' ? '/receita/' : ''
 };

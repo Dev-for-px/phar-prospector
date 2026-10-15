@@ -1,5 +1,7 @@
 // Servidor simples para testar o site no computador: npm run dev e abra http://localhost:5173
 // Imita a Vercel: /app abre app.html e aplica os mesmos cabeçalhos de segurança.
+// Para testar a aba Buscar leads com uma base local: RECEITA_DIR=pasta-de-saida npm run dev
+// (serve /receita/... dessa pasta, com leitura por faixa de bytes, como o Hugging Face).
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
@@ -13,10 +15,20 @@ createServer(async (req, res) => {
   let caminho = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (caminho === '/') caminho = '/index.html';
   if (!extname(caminho)) caminho += '.html';
-  const arquivo = join('dist', normalize(caminho).replace(/^(\.\.[/\\])+/, ''));
+  const limpo = normalize(caminho).replace(/^(\.\.[/\\])+/, '');
+  const receita = process.env.RECEITA_DIR && limpo.startsWith('/receita/');
+  const arquivo = receita ? join(process.env.RECEITA_DIR, limpo) : join('dist', limpo);
   try {
     const corpo = await readFile(arquivo);
-    res.writeHead(200, { 'Content-Type': TIPOS[extname(arquivo)] || 'application/octet-stream', ...cabecalhos });
+    const tipo = TIPOS[extname(arquivo)] || 'application/octet-stream';
+    const faixa = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || '');
+    if (faixa) {
+      const ini = Number(faixa[1]), fim = faixa[2] ? Number(faixa[2]) : corpo.length - 1;
+      res.writeHead(206, { 'Content-Type': tipo, 'Content-Range': `bytes ${ini}-${fim}/${corpo.length}`, ...cabecalhos });
+      res.end(corpo.subarray(ini, fim + 1));
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': tipo, ...cabecalhos });
     res.end(corpo);
   } catch {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
