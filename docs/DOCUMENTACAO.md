@@ -537,7 +537,8 @@ Fontes: [Supabase, Production Checklist](https://supabase.com/docs/guides/deploy
 | 14 out 2026 | logo depois de `a704462` | Plano de busca de leads, qualificação e IA (`docs/PLANO-PROSPECCAO.md`) |
 | 15 out 2026 | — | Plano atualizado: base da Receita como motor de busca (Fase 2 detalhada), Google Maps adiado |
 | 15 out 2026 | — | Repositório transferido para a organização `Dev-for-px` no GitHub |
-| 15 out 2026 | este envio | Aba Buscar leads (base da Receita, só MG): migração `busca_receita`, permissão `buscar_leads`, leitor de Parquet no navegador, script mensal em `scripts/receita/`. Enquanto a base não é publicada no Hugging Face, a aba aparece só para o administrador |
+| 15 out 2026 | `1df3474` | Aba Buscar leads (base da Receita, só MG): migração `busca_receita`, permissão `buscar_leads`, leitor de Parquet no navegador, script mensal em `scripts/receita/`. Enquanto a base não é publicada no Hugging Face, a aba aparece só para o administrador |
+| 15 out 2026 | logo depois de `1df3474` | Script da Receita converte os arquivos para UTF-8 (havia bytes inválidos). Vercel reconectada ao repositório da `Dev-for-px` (não publicava desde 9 out) |
 
 ## 17. Base da Receita (aba Buscar leads)
 

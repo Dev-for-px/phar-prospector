@@ -68,6 +68,7 @@ Abra http://localhost:5173/app#buscar. No computador, o site lê a base da pasta
 ## O que o script faz
 
 - Processa **um zip por vez** e apaga o descompactado logo depois.
+- Converte cada arquivo de latin-1 para UTF-8 ao descompactar e tira bytes nulos (o arquivo da Receita tem alguns, e o DuckDB recusa).
 - Guarda só estabelecimentos com situação **ativa** (código 02) das UFs pedidas.
 - Junta razão social e porte (Empresas) e opção pelo Simples e MEI (Simples).
 - O código de município é o **da Receita** (não é o do IBGE); os nomes vêm da tabela Municipios da própria Receita.

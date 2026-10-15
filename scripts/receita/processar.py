@@ -39,19 +39,23 @@ COL_SIM = ['cnpj_basico', 'simples', 'data_simples', 'data_exc_simples', 'mei', 
 
 
 def csv(caminho, colunas):
-    """Expressão read_csv para os arquivos da Receita (latin-1, ';', sem cabeçalho, tudo texto)."""
+    """Expressão read_csv para os arquivos da Receita (';', sem cabeçalho, tudo texto; já em UTF-8)."""
     cols = ', '.join(f"'{c}': 'VARCHAR'" for c in colunas)
     return (f"read_csv('{caminho}', delim=';', quote='\"', escape='\"', header=false, "
-            f"encoding='latin-1', columns={{{cols}}}, ignore_errors=true)")
+            f"columns={{{cols}}}, ignore_errors=true)")
 
 
 def extrair(zip_path, pasta):
-    """Descompacta o único arquivo do zip para a pasta temporária e devolve o caminho."""
+    """Descompacta o único arquivo do zip já convertido de latin-1 para UTF-8 (sem bytes nulos)."""
     with zipfile.ZipFile(zip_path) as z:
         nome = z.namelist()[0]
         destino = Path(pasta) / 'atual.csv'
-        with z.open(nome) as origem, open(destino, 'wb') as saida:
-            shutil.copyfileobj(origem, saida, 16 * 1024 * 1024)
+        with z.open(nome) as origem, open(destino, 'w', encoding='utf-8', newline='') as saida:
+            while True:
+                bloco = origem.read(16 * 1024 * 1024)
+                if not bloco:
+                    break
+                saida.write(bloco.replace(b'\x00', b'').decode('latin-1'))
     return destino
 
 
