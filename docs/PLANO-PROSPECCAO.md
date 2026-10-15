@@ -124,7 +124,7 @@ Aba Buscar no site  ──"Adicionar à lista"──▶  Supabase (tabela prospe
 - **Sem servidor e sem função paga.** A busca roda no navegador, lendo o Parquet direto do R2.
 - **Decidido em 15 out 2026:** o Cloudflare R2 pede cartão para ativar (mesmo no gratuito), então a base foi para o **Hugging Face Datasets** (público, gratuito, sem cartão, aceita leitura por faixa de bytes e chamada do navegador). Cobertura nesta fase: **só MG**, um arquivo por UF; acrescentar UF = rodar o script de novo com a sigla.
 
-### [ ] 2.1 Script de processamento mensal (`scripts/receita/`)
+### [x] 2.1 Script de processamento mensal (`scripts/receita/`)
 
 - Python + DuckDB. README curto em `scripts/receita/README.md` com o passo a passo para rodar todo mês.
 - Baixa os arquivos do mês do site oficial (conferir o endereço atual a partir de https://www.gov.br/receitafederal/dados). Processa **um zip por vez e apaga depois**, para caber em disco comum.
@@ -141,7 +141,9 @@ Aba Buscar no site  ──"Adicionar à lista"──▶  Supabase (tabela prospe
 
 **Pronto quando:** existe `uf=MG.parquet` no R2, com tamanho e tempo de processamento anotados no README.
 
-### [ ] 2.2 Leitura no navegador
+**Feito (15 out 2026):** `uf=MG.parquet` no Hugging Face, 2.935.399 empresas ativas, 152 MB, 2,5 min de processamento. Pompéu: 4.598 empresas ativas, 15 com CNAE de terapia (8650-0/03, 04, 05, 06, 8690-9/01, 03).
+
+### [x] 2.2 Leitura no navegador
 
 - Biblioteca para ler Parquet por faixa de bytes no navegador. Avaliar **hyparquet** (JavaScript puro, pequena) antes de DuckDB-WASM (pesado e exige `wasm-unsafe-eval` na CSP). Servir a biblioteca pelo próprio site (`dist/vendor/`, via `build.mjs`), como já é feito com o Supabase.
 - Ler só os grupos de linhas cujo mínimo e máximo de `mun` contêm o município buscado; depois filtrar CNAE e demais filtros na memória.
@@ -150,7 +152,9 @@ Aba Buscar no site  ──"Adicionar à lista"──▶  Supabase (tabela prospe
 
 **Pronto quando:** buscar Pompéu/MG traz o resultado em poucos segundos, baixando só uma parte pequena do arquivo de MG (anotar quantos KB).
 
-### [ ] 2.3 Aba Buscar
+**Feito:** Pompéu + fisioterapia e psicologia: 11 empresas em 0,8 s, ~1 MB lido. BH inteira só com e-mail: 505 mil em 4 s, 4,8 MB lidos. Biblioteca: hyparquet + fzstd (JavaScript puro, sem mudar `script-src`).
+
+### [x] 2.3 Aba Buscar
 
 - Botão de aba novo em `src/app.html` (`#aba-buscar`, `data-visao="buscar"`), entrando em `VISOES` em `src/js/app.js`. Código da busca em arquivo novo `src/js/buscar.js`.
 - Filtros: UF (lista), cidades (busca por nome, várias), ramo (busca por nome no `cnaes.json`, aceita CNAE principal ou também secundário), porte, MEI, abertura depois de, só com telefone, só com e-mail.
@@ -158,7 +162,7 @@ Aba Buscar no site  ──"Adicionar à lista"──▶  Supabase (tabela prospe
 - Mostrar o mês da base ("Base da Receita de setembro de 2026").
 - Telefone formatado e link de WhatsApp quando for celular.
 
-### [ ] 2.4 Adicionar à lista
+### [x] 2.4 Adicionar à lista
 
 - Depende das colunas do item 1.3 em `prospects` (`cnpj`, `cnae`, `razao_social`, `situacao`, `abertura`, `porte_receita`). Se 1.3 ainda não foi feito, criar essas colunas aqui (migração nova).
 - Índice único parcial `(empresa_id, cnpj) where cnpj <> ''` para impedir duplicado na mesma empresa.
@@ -166,19 +170,19 @@ Aba Buscar no site  ──"Adicionar à lista"──▶  Supabase (tabela prospe
 - Inserir em lote os marcados: `empresa` = fantasia ou razão social, `telefone` = tel1, `email`, endereço, `cidade` = nome do município, `uf`, `segmento` = nome do CNAE, `origem` = "Base da Receita", `status` = "novo", `porte` vindo do porte da Receita.
 - Respeitar o limite de 10.000 contatos por empresa (o banco já barra).
 
-### [ ] 2.5 Permissão e limites
+### [x] 2.5 Permissão e limites
 
 - Permissão nova `buscar_leads` em `private.permissoes_padrao()` (começa **marcada** para colaborador) e na lista `PERMS` da aba Equipe.
 - A aba Buscar só aparece para quem tem a permissão; o botão "Adicionar à lista" exige também `criar` (regra já vale no banco).
 - Sem limite técnico de busca (não tem custo por busca). Limite opcional de adição por dia fica para depois, se precisar.
 
-### [ ] 2.6 Cuidados de LGPD na tela
+### [ ] 2.6 Cuidados de LGPD na tela (selo MEI e aviso feitos; falta o status "Não quer contato", item 1.6)
 
 - Selo "MEI" visível: MEI é pessoa física, telefone e e-mail são dado pessoal.
 - Status "Não quer contato" (item 1.6) disponível.
 - Aviso curto na aba: "Dados públicos da Receita Federal. Use para contato comercial individual; não para envio em massa."
 
-### [ ] 2.7 Documentação
+### [x] 2.7 Documentação
 
 - `docs/DOCUMENTACAO.md`: nova parte sobre a base da Receita (onde fica no R2, como atualizar todo mês, como reconstruir) e as pendências.
 - Atualização mensal vira tarefa recorrente do Pedro (ou do Claude Code a pedido).

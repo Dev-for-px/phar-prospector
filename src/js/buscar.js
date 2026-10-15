@@ -10,6 +10,58 @@ window.PPBuscar = (function () {
   var PORTES = [['MEI', 'MEI'], ['ME', 'Microempresa (ME)'], ['EPP', 'Pequeno porte (EPP)'], ['DEMAIS', 'Demais']];
   var COLS = ['cnpj', 'fantasia', 'razao', 'cnae', 'cnaes2', 'mun', 'bairro', 'logradouro', 'numero', 'complemento',
     'cep', 'tel1', 'tel2', 'email', 'abertura', 'porte', 'simples'];
+  // apelidos comuns que não aparecem nos nomes oficiais dos CNAEs (vale para qualquer ramo)
+  var APELIDOS = {
+    "academia":["9313100"],
+    "dentista":["8630504","8630505"],
+    "advogado":["6911701"],
+    "advocacia":["6911701"],
+    "contador":["6920601"],
+    "contabilidade":["6920601"],
+    "cabeleireiro":["9602501"],
+    "salao de beleza":["9602501","9602502"],
+    "manicure":["9602501"],
+    "estetica":["9602502"],
+    "pet shop":["4789004"],
+    "veterinario":["7500100"],
+    "padaria":["1091102","4721102"],
+    "mecanica":["4520001"],
+    "oficina":["4520001"],
+    "farmacia":["4771701"],
+    "drogaria":["4771701"],
+    "imobiliaria":["6821801","6821802"],
+    "corretor de imoveis":["6821801"],
+    "medico":["8630503","8630502"],
+    "clinica":["8630503","8630502","8630501"],
+    "escola":["8513900","8520100","8531700"],
+    "creche":["8512100"],
+    "autoescola":["8599601"],
+    "restaurante":["5611201"],
+    "lanchonete":["5611203"],
+    "bar":["5611205"],
+    "mercado":["4711302","4712100"],
+    "supermercado":["4711302"],
+    "oculos":["4774100"],
+    "otica":["4774100"],
+    "loja de roupas":["4781400"],
+    "material de construcao":["4744099","4744005"],
+    "nutricionista":["8650002"],
+    "psicologo":["8650003"],
+    "fisioterapeuta":["8650004"],
+    "fonoaudiologo":["8650006"],
+    "personal":["9313100"],
+    "pilates":["9313100","8650004"],
+    "hotel":["5510801"],
+    "pousada":["5590601"],
+    "grafica":["1813001","1813099"],
+    "transportadora":["4930202","4930201"],
+    "marketing":["7319004","7311400"],
+    "informatica":["6201501","6209100","9511800"],
+    "software":["6201501","6202300","6203100"],
+    "engenharia":["7112000"],
+    "arquitetura":["7111100"],
+    "igreja":["9491000"]
+  };
   var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
   var b = {
@@ -113,9 +165,11 @@ window.PPBuscar = (function () {
       $('bz-base').textContent = 'Base da Receita de ' + MESES[Number(p[1]) - 1] + ' de ' + p[0] + ' · ' +
         ufs.join(', ') + ' · ' + total.toLocaleString('pt-BR') + ' empresas ativas.';
       var dl = $('bz-ramos'); dl.replaceChildren();
+      Object.keys(APELIDOS).forEach(function (k) { dl.append(el('option', { value: k })); });
       b.cnaes.forEach(function (c) { dl.append(el('option', { value: cnaeFmt(c.cod) + ' ' + c.nome })); });
       trocarUf();
       b.iniciado = true;
+      $('bz-buscar').disabled = false;
     });
   }
   function trocarUf() {
@@ -137,9 +191,14 @@ window.PPBuscar = (function () {
     var v = $('bz-ramo').value.trim(); if (!v) return;
     var cod = soNumeros(v.split(' ')[0]), achados;
     if (cod.length === 7 && b.cnaeNome[cod]) achados = [cod];
+    else if (APELIDOS[semAcento(v)]) achados = APELIDOS[semAcento(v)].filter(function (c) { return b.cnaeNome[c]; });
     else {
-      var q = semAcento(v);
-      achados = b.cnaes.filter(function (c) { return semAcento(c.nome).indexOf(q) !== -1 || c.cod.indexOf(cod || '#') === 0; })
+      // cada palavra digitada precisa começar uma palavra do nome ("condicionamento" não pega "acondicionamento")
+      var palavras = semAcento(v).split(/\s+/).filter(Boolean);
+      achados = b.cnaes.filter(function (c) {
+        var nome = ' ' + semAcento(c.nome).replace(/[^a-z0-9]+/g, ' ');
+        return palavras.every(function (p) { return nome.indexOf(' ' + p) !== -1; }) || (cod.length >= 4 && c.cod.indexOf(cod) === 0);
+      })
         .map(function (c) { return c.cod; });
     }
     if (!achados.length) { toast('Nenhuma atividade com esse nome ou código'); return; }
@@ -277,7 +336,7 @@ window.PPBuscar = (function () {
       else if (m.indexOf('uf-fora:') === 0) erro('Esse CNPJ é de ' + m.slice(8) + ', que ainda não está na base. Hoje a base cobre ' + Object.keys(b.atual.ufs).join(', ') + '.');
       else if (m === 'brasilapi') erro('A consulta de CNPJ não respondeu. Tente de novo ou escolha a cidade.');
       else erro('Não deu para ler a base agora. Confira sua conexão e tente de novo.');
-    }).then(function () { b.ocupado = false; $('bz-buscar').disabled = false; });
+    }).then(function () { b.ocupado = false; $('bz-buscar').disabled = !b.iniciado; });
   }
 
   // ---------- página de resultado ----------
@@ -410,6 +469,7 @@ window.PPBuscar = (function () {
   PORTES.forEach(function (p) {
     $('bz-portes').append(el('label', { class: 'chip' }, el('input', { type: 'checkbox', value: p[0] }), p[1]));
   });
+  $('bz-buscar').disabled = true; // até a base carregar
   $('bz-form').addEventListener('submit', buscar);
   $('bz-uf').addEventListener('change', trocarUf);
   $('bz-cidade').addEventListener('change', escolherCidade);

@@ -58,7 +58,7 @@ O que existe hoje:
 | Script do backup | Dentro da planilha (Extensões > Apps Script) | cópia em `backup/google-planilhas.gs` |
 | Conta administradora do sistema | Login do próprio sistema | pedrodadila@gmail.com |
 | Documentação do projeto no Claude | Projeto "PHAR Consultoria" | `claude/phar-prospector-sistema.md` |
-| Base da Receita (Parquet) | Hugging Face, conjunto de dados público | `HF_REPO` (a criar pelo Pedro; ver parte 17). Endereço lido pelo site em `src/js/config.js`, campo `receita` |
+| Base da Receita (Parquet) | Hugging Face, conjunto de dados público | https://huggingface.co/datasets/pharconsultoria/phar-receita (conta `pharconsultoria`). Endereço lido pelo site em `src/js/config.js`, campo `receita` |
 
 A chave pública pode aparecer aqui e no código: ela foi feita para ficar no navegador. Quem protege os dados são as regras do banco (parte 9).
 
@@ -125,7 +125,7 @@ Regras que valem sempre:
 
 - **Painel**: rosca com os contatos por status, linha com o crescimento da base e a lista "Para falar hoje". Para o responsável, mostra o aviso "Complete o cadastro da empresa" enquanto faltar dado.
 - **Contatos**: lista com busca, filtro por status, ordenação e os quatro números do topo (atrasados, hoje, próximos 7 dias, sem retorno). Cada contato tem ficha, histórico e o botão "Registrar contato". Contatos vindos da Receita mostram CNPJ, razão social e endereço na ficha.
-- **Buscar leads**: busca empresas na base da Receita por estado, cidades (várias), ramo (CNAE principal ou também secundário), nome, CNPJ, bairro, porte (MEI, ME, EPP, demais), data de abertura, só com telefone e só com e-mail. Resultado em páginas de 50, com contagem total, selo MEI e "Já na lista". O vendedor marca as empresas e clica em "Adicionar à minha lista": elas viram contatos "A contatar", origem "Base da Receita", sem duplicar CNPJ. Só aparece para quem tem a permissão `buscar_leads` (e, enquanto a base não estiver publicada, só para o administrador). Detalhes na parte 17.
+- **Buscar leads**: busca empresas na base da Receita por estado, cidades (várias), ramo (CNAE principal ou também secundário), nome, CNPJ, bairro, porte (MEI, ME, EPP, demais), data de abertura, só com telefone e só com e-mail. Resultado em páginas de 50, com contagem total, selo MEI e "Já na lista". O vendedor marca as empresas e clica em "Adicionar à minha lista": elas viram contatos "A contatar", origem "Base da Receita", sem duplicar CNPJ. Só aparece para quem tem a permissão `buscar_leads`. Detalhes na parte 17.
 - **Equipe**: quem usa a conta. O responsável adiciona colaboradores pelo e-mail e marca as permissões nas caixinhas.
 - **Empresa**: cadastro completo da empresa. Só o responsável altera.
 
@@ -538,18 +538,21 @@ Fontes: [Supabase, Production Checklist](https://supabase.com/docs/guides/deploy
 | 15 out 2026 | — | Plano atualizado: base da Receita como motor de busca (Fase 2 detalhada), Google Maps adiado |
 | 15 out 2026 | — | Repositório transferido para a organização `Dev-for-px` no GitHub |
 | 15 out 2026 | `1df3474` | Aba Buscar leads (base da Receita, só MG): migração `busca_receita`, permissão `buscar_leads`, leitor de Parquet no navegador, script mensal em `scripts/receita/`. Enquanto a base não é publicada no Hugging Face, a aba aparece só para o administrador |
-| 15 out 2026 | `2f8551a` | Números da primeira carga de MG (2.935.399 empresas, 152,4 MB) |
 | 15 out 2026 | logo depois de `1df3474` | Script da Receita converte os arquivos para UTF-8 (havia bytes inválidos). Vercel reconectada ao repositório da `Dev-for-px` (não publicava desde 9 out) |
+| 15 out 2026 | `2f8551a` | Números da primeira carga de MG (2.935.399 empresas, 152,4 MB) |
 | 15 out 2026 | logo depois de `2f8551a` | Busca testada com a base de MG (Pompéu + terapia: 11 empresas em 0,8 s lendo 1 MB; BH só com e-mail: 505 mil em 4 s lendo 4,8 MB). Ajustes: WhatsApp reconhece celular no formato antigo (sem o 9), tipo de logradouro repetido no endereço, lista antiga some quando a busca dá erro |
+| 15 out 2026 | este envio | Base de MG publicada no Hugging Face (`pharconsultoria/phar-receita`); aba Buscar leads liberada para todos com a permissão `buscar_leads`. Ramo casa com o começo das palavras e aceita apelidos comuns (dentista, academia, salão de beleza e mais 46, lista `APELIDOS` em `buscar.js`) |
 
 ## 17. Base da Receita (aba Buscar leads)
 
 A base pública de CNPJ da Receita Federal é processada uma vez por mês em arquivos Parquet e publicada num conjunto de dados público e gratuito do Hugging Face. O navegador lê só o pedaço da cidade buscada; nada da base passa pelo Supabase.
 
 - **Cobertura:** só MG nesta fase. Um arquivo por UF; acrescentar UF = rodar o script de novo com a sigla.
-- **Onde fica:** `receita/atual.json`, `receita/AAAA-MM/uf=MG.parquet`, `municipios.json` e `cnaes.json` no conjunto de dados do Hugging Face. O endereço vai em `src/js/config.js`, campo `receita`.
+- **Onde fica:** conjunto de dados público `pharconsultoria/phar-receita` no Hugging Face (https://huggingface.co/datasets/pharconsultoria/phar-receita): `receita/atual.json`, `receita/AAAA-MM/uf=MG.parquet`, `municipios.json` e `cnaes.json`. O endereço vai em `src/js/config.js`, campo `receita`. No computador (`localhost`) o site lê a base local; com `?base=hf` no endereço lê a do Hugging Face.
+- **Login no Hugging Face:** o token de escrita fica só no computador de quem roda o envio (`hf auth login`). Se o terminal não aceitar colar o token, copie o token e rode `.venv/bin/hf auth login --token "$(pbpaste)" --no-add-to-git-credential` dentro de `scripts/receita/`: ele lê da área de transferência sem mostrar.
 - **Origem dos dados:** https://arquivos.receitafederal.gov.br (Dados > Cadastros > CNPJ > AAAA-MM).
 - **Como atualizar todo mês e como reconstruir:** passo a passo em `scripts/receita/README.md` (baixar, `processar.py`, `enviar.py`).
 - **Como a busca lê pouco:** o arquivo está ordenado por município e CNAE; `municipios.json` guarda a primeira linha e a quantidade de cada cidade. Com ramo só principal, a tela lê primeiro só a coluna de CNAE da cidade e depois só os trechos daquele ramo.
+- **Ramo:** cada palavra digitada precisa começar uma palavra do nome do CNAE; aceita código (4 a 7 números) e apelidos comuns que não estão nos nomes oficiais (lista `APELIDOS` em `src/js/buscar.js`, fácil de aumentar).
 - **Busca só por CNPJ:** a BrasilAPI diz a cidade do CNPJ (código de município da Receita) e a tela procura nessa cidade.
 - **Primeira carga (base de outubro de 2026, MG):** 2.935.399 empresas ativas; `uf=MG.parquet` com 152,4 MB; processamento em 2,5 minutos num Mac (o download dos ~7 GB da Receita leva de 20 a 40 minutos).

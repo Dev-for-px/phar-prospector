@@ -7,5 +7,6 @@ window.PP_CONFIG = {
   chave: 'sb_publishable_Ete35T600mQmtXi-S4IEhw_jLunudad',
   // Base pública da Receita (Parquet no Hugging Face), lida pela aba Buscar leads. Vazio = ainda não publicada.
   // No computador (npm run dev com RECEITA_DIR) a base vem do servidor local.
-  receita: window.location.hostname === 'localhost' ? '/receita/' : ''
+  receita: window.location.hostname === 'localhost' && window.location.search.indexOf('base=hf') === -1 ? '/receita/'
+    : 'https://huggingface.co/datasets/pharconsultoria/phar-receita/resolve/main/receita/'
 };
