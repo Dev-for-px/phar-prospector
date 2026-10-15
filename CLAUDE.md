@@ -2,6 +2,8 @@
 
 Leia `docs/DOCUMENTACAO.md` antes de qualquer mudança. Ela descreve o sistema inteiro e o passo a passo de reconstrução.
 
+As próximas funções estão especificadas em `docs/PLANO-PROSPECCAO.md`. Implemente uma fase ou item por vez, e marque o item como feito (`[x]`) nesse arquivo ao terminar.
+
 ## Regra fixa: toda mudança atualiza a documentação
 
 Pedido do Pedro (dono do sistema): **qualquer alteração ou melhoria, por menor que seja, atualiza a documentação no mesmo envio (commit)**. Não deixe para depois e não espere ele pedir.
