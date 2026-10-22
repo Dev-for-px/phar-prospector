@@ -181,6 +181,32 @@ div.nome{cursor:default}
 .kb-mais{margin:0 12px 12px;font-size:15px;text-align:left}
 @media (max-width:640px){.kb-corpo{max-height:60vh}}
 
+/* ---------- excluir: menu "…", seleção e confirmação ---------- */
+.menu-mais{position:relative;flex:0 0 auto}
+.menu-mais summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px solid var(--line-strong);border-radius:var(--radius-md);background:var(--surface);color:var(--brand);font-size:20px;font-weight:700;line-height:1;cursor:pointer;user-select:none}
+.menu-mais summary::-webkit-details-marker{display:none}
+.menu-mais summary:hover,.menu-mais[open] summary{background:var(--surface-tint)}
+.menu-itens{position:absolute;right:0;top:calc(100% + 4px);z-index:5;min-width:160px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-md);padding:4px;display:flex;flex-direction:column}
+.menu-item{appearance:none;background:none;border:0;text-align:left;min-height:44px;padding:0 12px;border-radius:var(--radius-sm);font-size:15px;font-weight:600;color:var(--ink);cursor:pointer}
+.menu-item:hover{background:var(--surface-tint)}
+.menu-perigo{color:var(--danger)}
+.menu-perigo:hover{background:var(--danger-soft)}
+.acao-linha{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+.acao-linha .btn{flex:1 1 auto;width:auto}
+.c-nome.com-caixa{display:flex;gap:12px;align-items:flex-start}
+.c-nome.com-caixa > div{min-width:0}
+.sel-caixa{flex:none;width:20px;height:20px;margin:2px 0 0;accent-color:var(--brand);cursor:pointer}
+.linha.marcada{background:var(--surface-tint)}
+.selecao{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-top:12px;padding:8px 0;font-size:15px}
+.selecao .caixa{padding:4px 0}
+.selecao.ativa{position:sticky;top:0;z-index:4;background:var(--surface);border-bottom:1px solid var(--line-strong);padding:10px 0;box-shadow:0 6px 12px -8px rgba(16,30,51,.18)}
+.selecao-n{font-weight:600}
+.kb-topo{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.kb-topo .nome{min-width:0}
+.kb-topo .menu-mais summary{width:32px;height:32px;font-size:18px}
+.exc-clientes{background:var(--warning-soft);border-radius:var(--radius-lg);padding:12px 16px}
+.exc-clientes legend{float:left;width:100%;font-weight:600;color:var(--warning);margin-bottom:4px}
+
 /* ---------- janelas ---------- */
 dialog{border:0;padding:0;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:min(720px,calc(100% - 32px));background:var(--surface);color:var(--ink)}
 dialog::backdrop{background:rgba(14,34,63,.55)}

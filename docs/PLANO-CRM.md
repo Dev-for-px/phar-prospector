@@ -1,7 +1,7 @@
 # Plano: transformar o PHAR Prospector em CRM
 
 Criado em 22 de outubro de 2026, a partir da reunião com cliente de 21 out 2026.
-Status: **aprovado pelo Pedro. Fase A feita em 22 out 2026; as outras ainda não.** Ordem sugerida: A (Kanban), B (excluir), D (trava de exportação), C (importar), F (clientes), E (landing page, por último para usar imagens do sistema pronto). Fica em `docs/PLANO-CRM.md`.
+Status: **aprovado pelo Pedro. Fases A e B feitas em 22 out 2026; as outras ainda não.** Ordem sugerida: A (Kanban), B (excluir), D (trava de exportação), C (importar), F (clientes), E (landing page, por último para usar imagens do sistema pronto). Fica em `docs/PLANO-CRM.md`.
 
 Este arquivo é a especificação para o Claude Code. Antes de cada fase, leia `CLAUDE.md`,
 `docs/DOCUMENTACAO.md` e o código atual (ele pode ter mudado depois deste plano).
@@ -42,10 +42,14 @@ nenhuma chave secreta no código ou no chat, repositório privado.
 ## Fase B — Excluir contato
 
 Já existe excluir na ficha (permissão `excluir`). Acrescentar:
-- [ ] **B.1** Excluir pelo cartão do Kanban e pela linha da lista (menu "…"), com confirmação.
-- [ ] **B.2 Excluir em lote:** marcar vários na lista e "Excluir selecionados", com confirmação
+- [x] **B.1** Excluir pelo cartão do Kanban e pela linha da lista (menu "…"), com confirmação.
+- [x] **B.2 Excluir em lote:** marcar vários na lista e "Excluir selecionados", com confirmação
   mostrando a quantidade. Só para quem tem `excluir`; o banco já garante.
-- [ ] **B.3** Mensagem de desfazer por alguns segundos não é obrigatória; a confirmação basta.
+  Decisões do Pedro (22 out 2026): acima de 50 contatos, a confirmação pede para digitar EXCLUIR;
+  se a seleção tiver clientes fechados, avisa "Inclui N clientes fechados" e oferece "Excluir só os
+  que não são clientes"; cada exclusão em lote grava em `private.auditoria` quem, empresa,
+  quantidade e data (função `prospects_excluir_lote`), sem guardar os dados excluídos.
+- [x] **B.3** Mensagem de desfazer por alguns segundos não é obrigatória; a confirmação basta.
 
 ## Fase C — Importar base, com aprovação do administrador geral
 

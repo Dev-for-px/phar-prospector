@@ -138,6 +138,12 @@
       <div class="lista-head" id="lista-head" aria-hidden="true">
         <span>Contato</span><span>Cidade e telefone</span><span>Status</span><span>Próximo contato</span><span></span>
       </div>
+      <div class="selecao" id="selecao" hidden>
+        <label class="caixa" for="sel-todos"><input type="checkbox" id="sel-todos"><span id="sel-todos-txt">Marcar todos os visíveis</span></label>
+        <span class="selecao-n" id="sel-n" hidden></span>
+        <button class="btn btn-danger btn-sm" type="button" id="sel-excluir" hidden>Excluir selecionados</button>
+        <button class="linkbtn" type="button" id="sel-limpar" hidden>Desmarcar</button>
+      </div>
       <div class="lista" id="lista"></div>
       <div class="kanban" id="kanban" hidden></div>
     </section>
@@ -469,6 +475,34 @@
           <button class="btn btn-danger" type="button" id="ficha-excluir-sim">Sim, excluir</button>
           <button class="btn btn-sec" type="button" id="ficha-excluir-nao">Manter</button>
         </span>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- Confirmar exclusão (menu "…" e excluir em lote) -->
+<dialog id="dlg-excluir" aria-labelledby="exc-titulo">
+  <form id="form-excluir" novalidate>
+    <div class="dlg-head">
+      <h2 id="exc-titulo">Excluir contatos?</h2>
+      <button class="fechar" type="button" data-fechar aria-label="Fechar">×</button>
+    </div>
+    <div class="dlg-body">
+      <p>Os contatos e o histórico de conversas são apagados de vez. Não dá para desfazer.</p>
+      <fieldset class="campo exc-clientes" id="exc-clientes" hidden>
+        <legend id="exc-clientes-txt">Inclui clientes fechados.</legend>
+        <label class="caixa" for="exc-so-nao"><input type="radio" name="exc-qual" id="exc-so-nao" value="nao-clientes" checked><span id="exc-so-nao-txt">Excluir só os que não são clientes</span></label>
+        <label class="caixa" for="exc-todos"><input type="radio" name="exc-qual" id="exc-todos" value="todos"><span id="exc-todos-txt">Excluir todos, inclusive os clientes</span></label>
+      </fieldset>
+      <p class="aviso aviso-erro" id="exc-cliente-um" hidden>Este contato é um cliente fechado.</p>
+      <div class="campo" id="exc-digitar" hidden>
+        <label for="exc-palavra">Para confirmar, digite EXCLUIR</label>
+        <input type="text" id="exc-palavra" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      </div>
+      <p class="erro" id="exc-erro" role="alert" hidden></p>
+      <div class="acoes">
+        <button class="btn btn-danger" type="submit" id="exc-sim">Excluir</button>
+        <button class="btn btn-sec" type="button" data-fechar>Manter</button>
       </div>
     </div>
   </form>

@@ -40,7 +40,7 @@
   var st = {
     items: [], modo: 'carregando', visao: 'painel', filtro: 'todos', q: '', status: '', resp: '', ordem: 'proximo',
     modoContatos: 'lista', kbLimite: {}, kbFechadas: { cliente: true, perdido: true }, arrastando: '',
-    editId: null, logId: null, intTocado: false,
+    editId: null, logId: null, intTocado: false, sel: {}, excIds: [],
     usuario: null, empresa: null, simulando: false,
     equipe: null, nomes: {}, removendo: '', editandoPerm: '', cadastro: null, cadastroErro: false, perm: {}
   };
@@ -158,7 +158,15 @@
       el('span', { class: 'data', text: dataCurta(p.proximoContato) }));
   }
 
-  function linha(p, hj) {
+  // menu "…" de um contato (linha da lista e cartão do kanban): por enquanto, só Excluir
+  function menuMais(p) {
+    if (!pode('excluir')) return null;
+    return el('details', { class: 'menu-mais' },
+      el('summary', { 'aria-label': 'Mais ações para ' + nomeDe(p), title: 'Mais ações' }, '…'),
+      el('div', { class: 'menu-itens' },
+        el('button', { class: 'menu-item menu-perigo', type: 'button', text: 'Excluir', onclick: function () { this.closest('details').open = false; abrirExclusao([p.id]); } })));
+  }
+  function linha(p, hj, comSel) {
     var s = statusDe(p.status);
     var pessoa = [p.contato && p.empresa ? p.contato : '', p.cargo].filter(Boolean).join(' · ');
     var local = [[p.cidade, p.uf].filter(Boolean).join('/'), p.segmento].filter(Boolean).join(' · ');
@@ -166,15 +174,21 @@
     var telNode = p.telefone
       ? el('div', { class: 'sub' }, p.telefone, wa ? ' · ' : null, wa ? el('a', { href: wa, target: '_blank', rel: 'noopener noreferrer', text: 'WhatsApp' }) : null)
       : (p.email ? el('div', { class: 'sub', text: p.email }) : null);
-    return el('div', { class: 'linha', role: 'listitem' },
-      el('div', { class: 'c-nome' },
-        el('button', { class: 'nome', type: 'button', text: nomeDe(p), onclick: function () { abrirFicha(p.id); } }),
-        pessoa ? el('div', { class: 'sub', text: pessoa }) : null),
+    var caixa = comSel ? el('input', { type: 'checkbox', class: 'sel-caixa', 'aria-label': 'Selecionar ' + nomeDe(p),
+      onchange: function () { if (this.checked) st.sel[p.id] = true; else delete st.sel[p.id]; atualizarSelecao(); } }) : null;
+    if (caixa) caixa.checked = !!st.sel[p.id];
+    return el('div', { class: 'linha' + (comSel && st.sel[p.id] ? ' marcada' : ''), role: 'listitem', 'data-id': p.id },
+      el('div', { class: 'c-nome' + (caixa ? ' com-caixa' : '') }, caixa,
+        el('div', null,
+          el('button', { class: 'nome', type: 'button', text: nomeDe(p), onclick: function () { abrirFicha(p.id); } }),
+          pessoa ? el('div', { class: 'sub', text: pessoa }) : null)),
       el('div', { class: 'c-local' }, local ? el('div', { class: 'sub', text: local }) : null, telNode),
       el('div', { class: 'c-status' }, el('span', { class: 'tag s-' + s.id, text: s.curto || s.nome, title: s.nome })),
       celProximo(p, hj),
       el('div', { class: 'c-acao' },
-        pode('editar') ? el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Registrar contato', onclick: function () { abrirLog(p.id); } }) : null));
+        el('div', { class: 'acao-linha' },
+          pode('editar') ? el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Registrar contato', onclick: function () { abrirLog(p.id); } }) : null,
+          menuMais(p))));
   }
 
   // ---------- kanban ----------
@@ -193,7 +207,9 @@
       el('option', { value: '', text: 'Mover para…' }),
       STATUS.filter(function (s) { return s.id !== p.status; }).map(function (s) { return el('option', { value: s.id, text: s.nome }); })) : null;
     return el('div', { class: 'kb-card', role: 'listitem', draggable: arrasta ? 'true' : null, 'data-id': p.id },
-      el('button', { class: 'nome', type: 'button', text: nomeDe(p), onclick: function () { abrirFicha(p.id); } }),
+      el('div', { class: 'kb-topo' },
+        el('button', { class: 'nome', type: 'button', text: nomeDe(p), onclick: function () { abrirFicha(p.id); } }),
+        menuMais(p)),
       pessoa ? el('div', { class: 'sub', text: pessoa }) : null,
       local ? el('div', { class: 'sub', text: local }) : null,
       ativo(p) || parse(p.proximoContato) ? celProximo(p, hj) : null,
@@ -230,7 +246,77 @@
       guardar(checar(r)); toast('Movido para ' + statusDe(status).nome);
     }).catch(function (e) { p.status = antes; render(); toast(msgErro(e)); });
   }
-  function trocarModo(m) { st.modoContatos = m; gravarLocal('visao-contatos', m); render(); }
+  function trocarModo(m) { st.modoContatos = m; st.sel = {}; gravarLocal('visao-contatos', m); render(); }
+
+  // ---------- excluir (menu "…" e em lote) ----------
+  // Um contato: apaga direto na tabela (como a ficha). Vários: função prospects_excluir_lote, que grava na auditoria.
+  // Acima de 50, pede para digitar EXCLUIR. Se houver clientes fechados, oferece excluir só os que não são clientes.
+  var LIMITE_DIGITAR = 50;
+  function selecionados() { return Object.keys(st.sel); }
+  function atualizarSelecao(vis) {
+    var n = selecionados().length, total = vis ? vis.length : document.querySelectorAll('#lista .sel-caixa').length, todos = $('sel-todos');
+    $('sel-n').textContent = n === 1 ? '1 selecionado' : n + ' selecionados';
+    $('sel-n').hidden = !n; $('sel-excluir').hidden = !n; $('sel-limpar').hidden = !n;
+    $('selecao').classList.toggle('ativa', n > 0);
+    $('sel-todos-txt').textContent = 'Marcar todos os ' + total + ' visíveis';
+    todos.checked = n > 0 && n === total; todos.indeterminate = n > 0 && n < total;
+    document.querySelectorAll('#lista .linha[data-id]').forEach(function (l) { l.classList.toggle('marcada', !!st.sel[l.dataset.id]); });
+  }
+  function idsExclusao() {
+    var ids = st.excIds, r = document.querySelector('input[name="exc-qual"]:checked');
+    if (ids.length > 1 && r && r.value === 'nao-clientes') ids = ids.filter(function (id) { var p = achar(id); return !p || p.status !== 'cliente'; });
+    return ids;
+  }
+  function resumoExclusao() {
+    var ids = idsExclusao(), n = ids.length, btn = $('exc-sim'), digitar = n > LIMITE_DIGITAR;
+    $('exc-digitar').hidden = !digitar;
+    btn.textContent = n === 1 ? 'Excluir contato' : 'Excluir ' + n + ' contatos';
+    btn.disabled = !n || (digitar && $('exc-palavra').value.trim().toUpperCase() !== 'EXCLUIR');
+  }
+  function abrirExclusao(ids) {
+    ids = ids.filter(function (id) { return !!achar(id); });
+    if (!ids.length || !pode('excluir')) return;
+    var clientes = ids.filter(function (id) { return achar(id).status === 'cliente'; }).length, outros = ids.length - clientes;
+    st.excIds = ids;
+    $('exc-titulo').textContent = ids.length === 1 ? 'Excluir ' + nomeDe(achar(ids[0])) + '?' : 'Excluir ' + ids.length + ' contatos?';
+    $('exc-cliente-um').hidden = !(ids.length === 1 && clientes);
+    $('exc-clientes').hidden = !(ids.length > 1 && clientes);
+    $('exc-clientes-txt').textContent = clientes === 1 ? 'Inclui 1 cliente fechado.' : 'Inclui ' + clientes + ' clientes fechados.';
+    $('exc-so-nao-txt').textContent = outros ? 'Excluir só os ' + outros + ' que não são clientes' : 'Não excluir nenhum (todos são clientes)';
+    $('exc-todos-txt').textContent = 'Excluir todos os ' + ids.length + ', inclusive os clientes';
+    $('exc-so-nao').checked = true;
+    $('exc-palavra').value = '';
+    $('exc-erro').hidden = true;
+    resumoExclusao();
+    $('dlg-excluir').showModal();
+  }
+  function tirarDaLista(ids) {
+    var fora = {}; ids.forEach(function (id) { fora[id] = true; delete st.sel[id]; });
+    st.items = st.items.filter(function (p) { return !fora[p.id]; });
+  }
+  function confirmarExclusao(ev) {
+    ev.preventDefault();
+    var ids = idsExclusao(), btn = $('exc-sim'), err = $('exc-erro'), op;
+    resumoExclusao(); if (btn.disabled) return;
+    btn.disabled = true; err.hidden = true;
+    if (ids.length === 1) {
+      op = sb.from('prospects').delete().eq('id', ids[0]).select('id').then(function (r) {
+        if (!checar(r).length) throw { code: '42501' };
+        tirarDaLista(ids); toast('Contato excluído');
+      });
+    } else {
+      op = sb.rpc('prospects_excluir_lote', { p_ids: ids }).then(function (r) {
+        var res = checar(r) || {}, feitos = res.excluidos || 0, pulados = res.pulados || 0;
+        toast((feitos === 1 ? '1 contato excluído' : feitos + ' contatos excluídos') +
+          (pulados === 1 ? '. 1 não pôde ser excluído (sem permissão)' : pulados ? '. ' + pulados + ' não puderam ser excluídos (sem permissão)' : ''));
+        if (pulados) { st.sel = {}; return iniciarLista(); }
+        tirarDaLista(ids);
+      });
+    }
+    op.then(function () { if (ids.length > 1) st.sel = {}; $('dlg-excluir').close(); render(); })
+      .catch(function (e) { err.textContent = msgErro(e); err.hidden = false; })
+      .then(function () { resumoExclusao(); });
+  }
 
   function vazio(titulo, texto, botao, acao) {
     return el('div', { class: 'vazio' },
@@ -299,6 +385,7 @@
     $('modo-kanban').setAttribute('aria-pressed', String(kb));
     $('lista-head').hidden = kb;
     quadro.replaceChildren(); quadro.hidden = true;
+    $('selecao').hidden = true;
     lista.replaceChildren();
     lista.removeAttribute('role');
     $('btn-limpar').hidden = true;
@@ -320,10 +407,15 @@
       ? 'Mostrando ' + vis.length + ' de ' + st.items.length + (st.items.length === 1 ? ' contato' : ' contatos')
       : (st.items.length === 1 ? '1 contato' : st.items.length + ' contatos');
     $('btn-limpar').hidden = !filtrando;
+    // a seleção vale só para o que está na tela: mudar busca ou filtro desmarca o que sumiu
+    var naTela = {}; vis.forEach(function (p) { naTela[p.id] = true; });
+    selecionados().forEach(function (id) { if (!naTela[id] || kb) delete st.sel[id]; });
     if (!vis.length) { lista.append(vazio('Nenhum contato neste filtro', 'Mude a busca ou limpe os filtros para ver a lista inteira.', 'Limpar filtros', limpar)); return; }
     if (kb) { $('lista-head').hidden = true; quadro.hidden = false; renderKanban(vis, hj); return; }
+    var comSel = pode('excluir');
     lista.setAttribute('role', 'list');
-    vis.forEach(function (p) { lista.append(linha(p, hj)); });
+    vis.forEach(function (p) { lista.append(linha(p, hj, comSel)); });
+    if (comSel) { $('selecao').hidden = false; atualizarSelecao(vis); }
   }
   function limpar() { st.filtro = 'todos'; st.status = ''; st.resp = ''; st.q = ''; $('q').value = ''; $('filtro-status').value = ''; $('filtro-resp').value = ''; render(); }
   // filtro "Responsável": Todos, Meus contatos e, se a pessoa enxerga a equipe, cada colega
@@ -813,6 +905,23 @@
   $('ordem').addEventListener('change', function () { st.ordem = this.value; render(); });
   $('btn-limpar').addEventListener('click', limpar);
   $('btn-csv').addEventListener('click', csv);
+  $('sel-todos').addEventListener('change', function () {
+    var marcar = this.checked;
+    document.querySelectorAll('#lista .linha[data-id]').forEach(function (l) {
+      var c = l.querySelector('.sel-caixa'); if (!c) return;
+      c.checked = marcar; if (marcar) st.sel[l.dataset.id] = true; else delete st.sel[l.dataset.id];
+    });
+    atualizarSelecao();
+  });
+  $('sel-limpar').addEventListener('click', function () { st.sel = {}; render(); });
+  $('sel-excluir').addEventListener('click', function () { abrirExclusao(selecionados()); });
+  $('form-excluir').addEventListener('submit', confirmarExclusao);
+  $('exc-palavra').addEventListener('input', resumoExclusao);
+  document.querySelectorAll('input[name="exc-qual"]').forEach(function (r) { r.addEventListener('change', resumoExclusao); });
+  // fecha o menu "…" aberto ao clicar fora dele
+  document.addEventListener('click', function (ev) {
+    document.querySelectorAll('details.menu-mais[open]').forEach(function (d) { if (!d.contains(ev.target)) d.open = false; });
+  });
   document.querySelectorAll('[data-fechar]').forEach(function (b) { b.addEventListener('click', function () { b.closest('dialog').close(); }); });
   document.querySelectorAll('[data-sair]').forEach(function (b) { b.addEventListener('click', PP.sair); });
   $('estado-atualizar').addEventListener('click', function () { tela('carregando'); entrar(); });

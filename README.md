@@ -28,7 +28,7 @@ src/                 código do site (HTML, CSS e JavaScript legíveis)
 supabase/migrations/ estrutura do banco em etapas (tabelas, regras e funções)
 supabase/schema-completo.sql  o banco inteiro em um arquivo, gerado com "npm run schema"
 docs/DOCUMENTACAO.md documentação completa e reconstrução do zero
-docs/PLANO-CRM.md    plano para virar CRM (Fase A, Kanban, feita)
+docs/PLANO-CRM.md    plano para virar CRM (Fases A, Kanban, e B, excluir, feitas)
 scripts/             utilitários (gerar o schema completo)
 build.mjs            monta a pasta dist/ e minifica o código
 vercel.json          configuração da Vercel (build e cabeçalhos de segurança)
