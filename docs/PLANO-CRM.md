@@ -1,7 +1,7 @@
 # Plano: transformar o PHAR Prospector em CRM
 
 Criado em 22 de outubro de 2026, a partir da reunião com cliente de 21 out 2026.
-Status: **aprovado pelo Pedro. Fases A e B feitas em 22 out 2026; as outras ainda não.** Ordem sugerida: A (Kanban), B (excluir), D (trava de exportação), C (importar), F (clientes), E (landing page, por último para usar imagens do sistema pronto). Fica em `docs/PLANO-CRM.md`.
+Status: **aprovado pelo Pedro. Fases A, B e D feitas em 22 out 2026; as outras ainda não.** Ordem sugerida: A (Kanban), B (excluir), D (trava de exportação), C (importar), F (clientes), E (landing page, por último para usar imagens do sistema pronto). Fica em `docs/PLANO-CRM.md`.
 
 Este arquivo é a especificação para o Claude Code. Antes de cada fase, leia `CLAUDE.md`,
 `docs/DOCUMENTACAO.md` e o código atual (ele pode ter mudado depois deste plano).
@@ -76,18 +76,23 @@ Motivo: proteger o servidor (plano gratuito) e a qualidade da base.
 
 ## Fase D — Exportação travada, só o administrador geral libera
 
-- [ ] **D.1** Por padrão, **ninguém** exporta, nem o responsável da empresa. O botão
+- [x] **D.1** Por padrão, **ninguém** exporta, nem o responsável da empresa. O botão
   "Baixar planilha (CSV)" some.
-- [ ] **D.2** Coluna nova `empresas.exportacao_liberada boolean default false`. Só o administrador
+- [x] **D.2** Coluna nova `empresas.exportacao_liberada boolean default false`. Só o administrador
   geral muda, no painel admin (por empresa: "Liberar exportação" / "Bloquear exportação").
   Registrar em auditoria.
-- [ ] **D.3** Com a empresa liberada, exporta quem for responsável ou tiver a permissão `exportar`.
-- [ ] **D.4 Trava de verdade:** hoje o CSV é gerado no navegador a partir da lista carregada, então
+- [x] **D.3** Com a empresa liberada, exporta quem for responsável ou tiver a permissão `exportar`.
+- [x] **D.4 Trava de verdade:** hoje o CSV é gerado no navegador a partir da lista carregada, então
   esconder o botão não impede cópia. Para a trava valer, a exportação passa a ser uma função do banco
   (`exportar_contatos`) que confere `exportacao_liberada` e a permissão, e o navegador só gera o
   arquivo com o que ela devolver. Registrar cada exportação em auditoria. Avisar na documentação que
   quem enxerga contatos na tela ainda pode copiá-los à mão.
-- [ ] **D.5** O backup do administrador (`admin_exportar` e planilha do Google) continua igual.
+- [x] **D.5** O backup do administrador (`admin_exportar` e planilha do Google) continua igual.
+- Decisões do Pedro (22 out 2026): além de liberar e bloquear, "Liberar por 24 horas", com o prazo
+  em `empresas.exportacao_ate` (nula = sem prazo); `exportar_contatos` só libera se
+  `exportacao_liberada` e (`exportacao_ate` nula ou no futuro); o selo do admin mostra até quando vale.
+  O admin em modo simular segue a mesma regra da empresa (não fura a trava); o backup geral
+  continua por `admin_exportar`.
 
 ## Fase E — Landing page de vendas (conversão)
 

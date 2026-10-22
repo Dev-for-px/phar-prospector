@@ -38,6 +38,29 @@
       .catch(function () { toast('Não deu para sair da simulação. Tente de novo.'); });
   }
 
+  // exportação de contatos da empresa: travada por padrão; liberar sem prazo, por 24 horas ou bloquear
+  function exportacao(e, modo, feito) {
+    sb.rpc('admin_exportacao', { alvo: e.id, modo: modo }).then(function (r) { checar(r); toast(feito); return carregar(); })
+      .catch(function () { toast('Não deu para alterar a exportação agora'); });
+  }
+  var fmtPrazo = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  function prazo(s) { var d = new Date(s); return isNaN(d) ? '' : fmtPrazo.format(d).replace(',', ' às'); }
+  function seloExportacao(e) {
+    if (e.exportacao_ok) return el('span', { class: 'tag c-ativa', text: e.exportacao_ate ? 'Liberada até ' + prazo(e.exportacao_ate) : 'Liberada sem prazo' });
+    if (e.exportacao_liberada && e.exportacao_ate) return el('span', { class: 'tag c-pendente', text: 'Prazo vencido em ' + prazo(e.exportacao_ate) });
+    return el('span', { class: 'tag c-bloqueada', text: 'Bloqueada' });
+  }
+  function blocoExportacao(e) {
+    var semPrazo = e.exportacao_ok && !e.exportacao_ate, botoes = [];
+    if (!semPrazo) botoes.push(el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Liberar sem prazo', onclick: function () { exportacao(e, 'liberar', 'Exportação liberada sem prazo'); } }));
+    botoes.push(el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: e.exportacao_ok && e.exportacao_ate ? 'Mais 24 horas' : 'Liberar por 24 horas',
+      onclick: function () { exportacao(e, 'liberar_24h', 'Exportação liberada por 24 horas'); } }));
+    if (e.exportacao_ok) botoes.push(el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Bloquear exportação', onclick: function () { exportacao(e, 'bloquear', 'Exportação bloqueada'); } }));
+    return el('div', { class: 'adm-export' },
+      el('span', { class: 'adm-export-rot', text: 'Exportação de contatos' }), seloExportacao(e),
+      el('div', { class: 'adm-export-acoes' }, botoes));
+  }
+
   function acoes(e) {
     if (e.propria) return el('span', { class: 'dica', text: 'Sua empresa' });
     if (st.confirmando === e.id) return [
@@ -76,7 +99,8 @@
       el('div', { class: 'sub num-col' }, PP.dataHora(e.criado_em), el('div', { text: acesso })),
       el('div', { class: 'num-col rot', 'data-rot': 'Contatos', text: String(e.contatos) }),
       el('div', null, el('span', { class: 'tag c-' + e.status, text: ROTULO[e.status] || e.status })),
-      el('div', { class: 'adm-acoes' }, acoes(e)));
+      el('div', { class: 'adm-acoes' }, acoes(e)),
+      blocoExportacao(e));
   }
 
   function renderGraficos() {

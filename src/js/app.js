@@ -33,7 +33,7 @@
       ['buscar_leads', 'Buscar leads na base da Receita', 'Para adicionar os achados à lista, precisa também de "Cadastrar contatos".'],
       ['editar', 'Editar contatos e registrar conversas'],
       ['excluir', 'Excluir contatos'],
-      ['exportar', 'Baixar a planilha de contatos (CSV)']] }
+      ['exportar', 'Baixar a planilha de contatos (CSV)', 'Só vale se a PHAR liberar a exportação para a empresa.']] }
   ];
   var PERM_PADRAO = { ver_painel: true, ver_todos: true, ver_equipe: true, ver_empresa: true, criar: true, editar: true, excluir: false, exportar: false, buscar_leads: true };
 
@@ -367,7 +367,7 @@
     var pronto = st.modo === 'ok';
     ['atrasados', 'hoje', 'semana', 'sem'].forEach(function (k) { $('n-' + k).textContent = pronto ? n[k] : '–'; });
     document.querySelectorAll('.stat').forEach(function (b) { b.setAttribute('aria-pressed', String(st.visao === 'contatos' && b.dataset.filtro === st.filtro)); });
-    $('btn-csv').hidden = !(pronto && st.items.length && pode('exportar'));
+    $('btn-csv').hidden = !(pronto && st.items.length && pode('exportar') && exportacaoLiberada());
     $('dica-proprios').hidden = pode('ver_todos');
 
     VISOES.forEach(function (v) {
@@ -589,30 +589,41 @@
   }
 
   // ---------- planilha ----------
+  // A exportação é travada no banco: só a PHAR libera, por empresa (com ou sem prazo).
+  // Os dados vêm da função exportar_contatos, que confere a liberação e a permissão e registra na auditoria.
+  function exportacaoLiberada() { return !!(st.empresa && st.empresa.exportacao_liberada); }
   function csv() {
     var cols = [['Empresa', 'empresa'], ['Contato', 'contato'], ['Cargo', 'cargo'], ['Telefone', 'telefone'], ['E-mail', 'email'], ['Cidade', 'cidade'], ['UF', 'uf'],
       ['Segmento', 'segmento'], ['Porte', 'porte'], ['Origem', 'origem'], ['Site ou Instagram', 'link'], ['Interesse', 'interesse'], ['Status', 'status'],
-      ['Último contato', 'ultimoContato'], ['Próximo contato', 'proximoContato'], ['Observações', 'observacoes'], ['Histórico', 'historico'], ['Cadastrado por', 'userId'], ['Responsável', 'responsavel'], ['Cliente desde', 'clienteDesde']];
+      ['Último contato', 'ultimo_contato'], ['Próximo contato', 'proximo_contato'], ['Observações', 'observacoes'], ['Histórico', 'historico'],
+      ['Cadastrado por', 'cadastrado_por'], ['Responsável', 'responsavel'], ['Cliente desde', 'cliente_desde'], ['CNPJ', 'cnpj']];
     function cel(v) {
       v = String(v == null ? '' : v);
       if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;   // evita que a planilha trate o texto como fórmula
       return '"' + v.replace(/"/g, '""') + '"';
     }
-    var linhas = [cols.map(function (c) { return cel(c[0]); }).join(';')];
-    st.items.forEach(function (p) {
-      linhas.push(cols.map(function (c) {
-        var v = p[c[1]];
-        if (c[1] === 'status') v = statusDe(v).nome;
-        else if (c[1] === 'userId' || c[1] === 'responsavel') v = st.nomes[v] || '';
-        else if (c[1] === 'historico') v = v.map(function (h) { return [h.data, h.canal, h.nota].filter(Boolean).join(' - '); }).join(' | ');
-        return cel(v);
-      }).join(';'));
-    });
-    var url = URL.createObjectURL(new Blob(['﻿' + linhas.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
-    var a = el('a', { href: url, download: 'prospeccao-' + hoje() + '.csv' });
-    document.body.append(a); a.click(); a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
-    toast('Planilha baixada');
+    var btn = $('btn-csv'); btn.disabled = true;
+    sb.rpc('exportar_contatos').then(function (r) {
+      var dados = checar(r) || [], linhas = [cols.map(function (c) { return cel(c[0]); }).join(';')];
+      dados.forEach(function (p) {
+        linhas.push(cols.map(function (c) {
+          var v = p[c[1]];
+          if (c[1] === 'status') v = statusDe(v).nome;
+          else if (c[1] === 'historico') v = (Array.isArray(v) ? v : []).map(function (h) { return [h.data, h.canal, h.nota].filter(Boolean).join(' - '); }).join(' | ');
+          return cel(v);
+        }).join(';'));
+      });
+      var url = URL.createObjectURL(new Blob(['\ufeff' + linhas.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+      var a = el('a', { href: url, download: 'prospeccao-' + hoje() + '.csv' });
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      toast(dados.length === 1 ? 'Planilha baixada com 1 contato' : 'Planilha baixada com ' + dados.length + ' contatos');
+    }).catch(function (e) {
+      if (e && e.message === 'exportacao_bloqueada') {
+        st.empresa.exportacao_liberada = false; render();
+        toast('A exportação não está liberada para a empresa. Fale com a PHAR Consultoria.');
+      } else toast(msgErro(e).replace('salvar', 'baixar a planilha'));
+    }).then(function () { btn.disabled = false; });
   }
 
   // ---------- equipe ----------
