@@ -10,7 +10,7 @@ Controle de prospecção com retorno programado: cada contato abordado, o status
 |---|---|---|
 | `/` | `src/index.html` | Todo mundo. Apresenta o sistema, com os botões Entrar e Criar conta. |
 | `/entrar` | `src/entrar.html` | Todo mundo. Login, cadastro e recuperação de senha. |
-| `/app` | `src/app.html` | Só quem tem login em uma empresa ativa. É o sistema: Painel, Contatos, Equipe e Empresa. |
+| `/app` | `src/app.html` | Só quem tem login em uma empresa ativa. É o sistema: Painel, Contatos (em lista ou Kanban), Buscar leads, Equipe e Empresa. |
 | `/admin` | `src/admin.html` | Só o administrador. Lista as empresas, libera, bloqueia, simula acesso e baixa o backup. |
 
 ## Como está organizado
@@ -28,6 +28,7 @@ src/                 código do site (HTML, CSS e JavaScript legíveis)
 supabase/migrations/ estrutura do banco em etapas (tabelas, regras e funções)
 supabase/schema-completo.sql  o banco inteiro em um arquivo, gerado com "npm run schema"
 docs/DOCUMENTACAO.md documentação completa e reconstrução do zero
+docs/PLANO-CRM.md    plano para virar CRM (Fase A, Kanban, feita)
 scripts/             utilitários (gerar o schema completo)
 build.mjs            monta a pasta dist/ e minifica o código
 vercel.json          configuração da Vercel (build e cabeçalhos de segurança)

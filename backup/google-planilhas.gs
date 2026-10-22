@@ -26,7 +26,8 @@ var COLUNAS = [
   ['E-mail', 'email'], ['Cidade', 'cidade'], ['UF', 'uf'], ['Segmento', 'segmento'], ['Porte', 'porte'],
   ['Origem', 'origem'], ['Site ou Instagram', 'link'], ['Interesse', 'interesse'], ['Status', 'status'],
   ['Último contato', 'ultimo_contato'], ['Próximo contato', 'proximo_contato'], ['Observações', 'observacoes'],
-  ['Histórico', 'historico'], ['Cadastrado por', 'cadastrado_por'], ['Cadastrado em', 'criado_em'], ['Atualizado em', 'atualizado_em']
+  ['Histórico', 'historico'], ['Cadastrado por', 'cadastrado_por'], ['Responsável', 'responsavel'], ['Cliente desde', 'cliente_desde'],
+  ['Cadastrado em', 'criado_em'], ['Atualizado em', 'atualizado_em']
 ];
 var STATUS = {
   novo: 'A contatar', contatado: 'Contato feito', conversa: 'Em conversa', diagnostico: 'Reunião ou diagnóstico',

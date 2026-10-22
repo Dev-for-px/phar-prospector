@@ -25,7 +25,7 @@
   var PERMS = [
     { grupo: 'O que pode ver', itens: [
       ['ver_painel', 'Painel com os gráficos'],
-      ['ver_todos', 'Contatos de toda a equipe', 'Desmarcado: vê só os contatos que ela mesma cadastrou.'],
+      ['ver_todos', 'Contatos de toda a equipe', 'Desmarcado: vê só os contatos que ela mesma cadastrou ou dos quais é responsável.'],
       ['ver_equipe', 'Quem faz parte da equipe'],
       ['ver_empresa', 'Dados da empresa (CNPJ, endereço)']] },
     { grupo: 'O que pode fazer', itens: [
@@ -38,7 +38,8 @@
   var PERM_PADRAO = { ver_painel: true, ver_todos: true, ver_equipe: true, ver_empresa: true, criar: true, editar: true, excluir: false, exportar: false, buscar_leads: true };
 
   var st = {
-    items: [], modo: 'carregando', visao: 'painel', filtro: 'todos', q: '', status: '', ordem: 'proximo',
+    items: [], modo: 'carregando', visao: 'painel', filtro: 'todos', q: '', status: '', resp: '', ordem: 'proximo',
+    modoContatos: 'lista', kbLimite: {}, kbFechadas: { cliente: true, perdido: true }, arrastando: '',
     editId: null, logId: null, intTocado: false,
     usuario: null, empresa: null, simulando: false,
     equipe: null, nomes: {}, removendo: '', editandoPerm: '', cadastro: null, cadastroErro: false, perm: {}
@@ -80,13 +81,17 @@
     return 'Não deu para salvar agora. Confira sua conexão e tente de novo.';
   }
   function pode(k) { return st.perm[k] !== false; }
+  // preferências da tela, guardadas só neste navegador e por usuário
+  function chaveLocal(k) { return 'pp-' + k + ':' + (st.usuario ? st.usuario.id : ''); }
+  function lerLocal(k) { try { return JSON.parse(localStorage.getItem(chaveLocal(k))); } catch (e) { return null; } }
+  function gravarLocal(k, v) { try { localStorage.setItem(chaveLocal(k), JSON.stringify(v)); } catch (e) { /* navegador sem armazenamento */ } }
   function checar(r) { if (r.error) { r.error.status = r.status; throw r.error; } return r.data; }
 
   // ---------- banco: conversão e chamadas ----------
   function paraApp(r) {
     var p = { id: r.id, status: r.status, proximoContato: r.proximo_contato || '', ultimoContato: r.ultimo_contato || '',
       observacoes: r.observacoes || '', historico: Array.isArray(r.historico) ? r.historico : [],
-      criadoEm: r.criado_em || '', userId: r.user_id || '',
+      criadoEm: r.criado_em || '', userId: r.user_id || '', responsavel: r.responsavel || '', clienteDesde: r.cliente_desde || '',
       cnpj: r.cnpj || '', razaoSocial: r.razao_social || '', cnae: r.cnae || '', endereco: r.endereco || '', abertura: r.abertura || '' };
     CAMPOS_TEXTO.forEach(function (k) { p[k] = r[k] || ''; });
     return p;
@@ -120,6 +125,7 @@
       if (st.filtro === 'semana' && k !== 'semana') return false;
       if (st.filtro === 'sem' && !(k === 'sem' && ativo(p))) return false;
       if (st.status && p.status !== st.status) return false;
+      if (st.resp && p.responsavel !== (st.resp === 'eu' ? st.usuario.id : st.resp)) return false;
       if (q) {
         var alvo = semAcento([p.empresa, p.contato, p.cidade, p.uf, p.segmento, p.telefone, p.email, p.interesse, p.observacoes, p.razaoSocial, p.cnpj].join(' '));
         var tel = String(p.telefone || '').replace(/\D/g, '');
@@ -170,6 +176,61 @@
       el('div', { class: 'c-acao' },
         pode('editar') ? el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Registrar contato', onclick: function () { abrirLog(p.id); } }) : null));
   }
+
+  // ---------- kanban ----------
+  // Uma coluna por status. Desenha no máximo 50 cartões por coluna (mais com "Ver mais").
+  // No computador, arrastar muda o status; em qualquer tela, o menu "Mover para…" do cartão faz o mesmo.
+  var POR_COLUNA = 50;
+  function quemCuida(p) {
+    var resp = st.nomes[p.responsavel], autor = st.nomes[p.userId];
+    if (resp && autor && p.userId !== p.responsavel) return resp + ' · cadastrado por ' + autor;
+    return resp || (autor ? 'Cadastrado por ' + autor : '');
+  }
+  function cartao(p, hj, arrasta) {
+    var pessoa = [p.contato && p.empresa ? p.contato : '', p.cargo].filter(Boolean).join(' · ');
+    var local = [p.cidade, p.uf].filter(Boolean).join('/'), quem = quemCuida(p);
+    var menu = arrasta ? el('select', { class: 'kb-mover', 'aria-label': 'Mover ' + nomeDe(p) + ' para outra etapa', onchange: function () { moverPara(p.id, this.value); } },
+      el('option', { value: '', text: 'Mover para…' }),
+      STATUS.filter(function (s) { return s.id !== p.status; }).map(function (s) { return el('option', { value: s.id, text: s.nome }); })) : null;
+    return el('div', { class: 'kb-card', role: 'listitem', draggable: arrasta ? 'true' : null, 'data-id': p.id },
+      el('button', { class: 'nome', type: 'button', text: nomeDe(p), onclick: function () { abrirFicha(p.id); } }),
+      pessoa ? el('div', { class: 'sub', text: pessoa }) : null,
+      local ? el('div', { class: 'sub', text: local }) : null,
+      ativo(p) || parse(p.proximoContato) ? celProximo(p, hj) : null,
+      quem ? el('div', { class: 'kb-quem', text: quem }) : null,
+      menu);
+  }
+  function renderKanban(vis, hj) {
+    var quadro = $('kanban'), grupos = {}, arrasta = pode('editar');
+    STATUS.forEach(function (s) { grupos[s.id] = []; });
+    vis.forEach(function (p) { grupos[statusDe(p.status).id].push(p); });
+    STATUS.forEach(function (s) {
+      if (st.status && st.status !== s.id) return;
+      var itens = grupos[s.id], fechada = !!st.kbFechadas[s.id], lim = st.kbLimite[s.id] || POR_COLUNA, corpo = null, mais = null;
+      var cab = el('button', { class: 'kb-cab', type: 'button', 'aria-expanded': String(!fechada),
+        onclick: function () { st.kbFechadas[s.id] = !fechada; gravarLocal('kanban-fechadas', st.kbFechadas); render(); } },
+        el('span', { class: 'kb-titulo', text: s.curto || s.nome, title: s.nome }),
+        el('span', { class: 'kb-n', text: String(itens.length) }),
+        el('span', { class: 'kb-seta', 'aria-hidden': 'true', text: fechada ? '+' : '−' }));
+      if (!fechada) {
+        corpo = itens.length
+          ? el('div', { class: 'kb-corpo', role: 'list', 'aria-label': s.nome }, itens.slice(0, lim).map(function (p) { return cartao(p, hj, arrasta); }))
+          : el('p', { class: 'kb-vazio', text: arrasta ? 'Nenhum contato. Arraste um cartão para cá.' : 'Nenhum contato.' });
+        if (itens.length > lim) mais = el('button', { class: 'linkbtn kb-mais', type: 'button', text: 'Ver mais (faltam ' + (itens.length - lim) + ')',
+          onclick: function () { st.kbLimite[s.id] = lim + POR_COLUNA; render(); } });
+      }
+      quadro.append(el('section', { class: 'kb-col kb-c-' + s.id + (fechada ? ' kb-fechada' : ''), 'data-status': s.id, 'aria-label': s.nome + ': ' + itens.length }, cab, corpo, mais));
+    });
+  }
+  function moverPara(id, status) {
+    var p = achar(id), antes;
+    if (!p || !status || p.status === status || !pode('editar')) { render(); return; }
+    antes = p.status; p.status = status; render();
+    sb.from('prospects').update({ status: status }).eq('id', id).select().single().then(function (r) {
+      guardar(checar(r)); toast('Movido para ' + statusDe(status).nome);
+    }).catch(function (e) { p.status = antes; render(); toast(msgErro(e)); });
+  }
+  function trocarModo(m) { st.modoContatos = m; gravarLocal('visao-contatos', m); render(); }
 
   function vazio(titulo, texto, botao, acao) {
     return el('div', { class: 'vazio' },
@@ -233,6 +294,11 @@
     if (st.visao === 'empresa') return;
     if (st.visao === 'buscar') return;
 
+    var kb = st.modoContatos === 'kanban', quadro = $('kanban');
+    $('modo-lista').setAttribute('aria-pressed', String(!kb));
+    $('modo-kanban').setAttribute('aria-pressed', String(kb));
+    $('lista-head').hidden = kb;
+    quadro.replaceChildren(); quadro.hidden = true;
     lista.replaceChildren();
     lista.removeAttribute('role');
     $('btn-limpar').hidden = true;
@@ -249,16 +315,27 @@
         : vazio('Nenhum contato para mostrar', 'Quando houver contatos liberados para você, eles aparecem aqui.', '', null));
       return;
     }
-    var vis = visiveis(hj), filtrando = st.filtro !== 'todos' || st.status || st.q.trim();
+    var vis = visiveis(hj), filtrando = st.filtro !== 'todos' || st.status || st.resp || st.q.trim();
     $('contagem').textContent = filtrando
       ? 'Mostrando ' + vis.length + ' de ' + st.items.length + (st.items.length === 1 ? ' contato' : ' contatos')
       : (st.items.length === 1 ? '1 contato' : st.items.length + ' contatos');
     $('btn-limpar').hidden = !filtrando;
     if (!vis.length) { lista.append(vazio('Nenhum contato neste filtro', 'Mude a busca ou limpe os filtros para ver a lista inteira.', 'Limpar filtros', limpar)); return; }
+    if (kb) { $('lista-head').hidden = true; quadro.hidden = false; renderKanban(vis, hj); return; }
     lista.setAttribute('role', 'list');
     vis.forEach(function (p) { lista.append(linha(p, hj)); });
   }
-  function limpar() { st.filtro = 'todos'; st.status = ''; st.q = ''; $('q').value = ''; $('filtro-status').value = ''; render(); }
+  function limpar() { st.filtro = 'todos'; st.status = ''; st.resp = ''; st.q = ''; $('q').value = ''; $('filtro-status').value = ''; $('filtro-resp').value = ''; render(); }
+  // filtro "Responsável": Todos, Meus contatos e, se a pessoa enxerga a equipe, cada colega
+  function preencherFiltroResp() {
+    var sel = $('filtro-resp'), membros = (st.equipe && st.equipe.membros) || [];
+    while (sel.options.length > 2) sel.remove(2);
+    if (membros.length > 1) membros.forEach(function (m) {
+      if (st.usuario && m.id !== st.usuario.id) sel.append(el('option', { value: m.id, text: m.nome || m.email }));
+    });
+    if (st.resp && st.resp !== 'eu' && !membros.some(function (m) { return m.id === st.resp; })) st.resp = '';
+    sel.value = st.resp;
+  }
   function visaoLiberada(v) {
     return v === 'contatos' || (v === 'painel' && pode('ver_painel')) || (v === 'buscar' && pode('buscar_leads') && !!window.PPBuscar && (!!PP.cfg.receita || !!(st.usuario && st.usuario.is_admin))) || (v === 'equipe' && pode('ver_equipe')) || (v === 'empresa' && pode('ver_empresa'));
   }
@@ -281,6 +358,16 @@
     var v = $('f-proximo').value;
     $('f-resumo').textContent = parse(v) ? 'Retorno em ' + dataLonga(v) + '.' : 'Sem data de retorno. Este contato não entra nos lembretes.';
   }
+  // responsável do contato: só o responsável pela conta (ou o admin simulando) troca; o banco confere
+  function podeTrocarResp() { return podeEditarEmpresa(); }
+  function opcoesResp(atual) {
+    var sel = $('f-resp'), membros = (st.equipe && st.equipe.membros) || [], tem = false;
+    sel.replaceChildren();
+    membros.forEach(function (m) { if (m.id === atual) tem = true; sel.append(el('option', { value: m.id, text: m.nome || m.email })); });
+    if (atual && !tem) sel.append(el('option', { value: atual, text: st.nomes[atual] || (st.usuario && atual === st.usuario.id ? st.usuario.nome || 'Você' : 'Outra pessoa da equipe') }));
+    if (!atual) sel.prepend(el('option', { value: '', text: 'Sem responsável' }));
+    sel.value = atual || '';
+  }
   function abrirFicha(id) {
     var p = id ? achar(id) : null;
     if (id && !p) return;
@@ -290,9 +377,12 @@
     $('f-status').value = p ? statusDe(p.status).id : 'novo';
     $('f-proximo').value = p && parse(p.proximoContato) ? p.proximoContato : '';
     $('f-obs').value = p ? p.observacoes || '' : '';
+    opcoesResp(p ? p.responsavel : (st.usuario && st.usuario.id));
     resumoFicha();
     var leitura = !!p && !pode('editar');
     $('form-ficha').querySelectorAll('.dlg-body input, .dlg-body select, .dlg-body textarea, #f-atalhos button').forEach(function (c) { c.disabled = leitura; });
+    $('f-resp').disabled = leitura || !podeTrocarResp();
+    $('f-resp-dica').hidden = leitura || podeTrocarResp();
     $('ficha-erro').hidden = true;
     $('ficha-excluir').hidden = !p || !pode('excluir');
     $('ficha-confirma').hidden = true;
@@ -307,6 +397,7 @@
       if (site) rap.append(el('a', { href: site, target: '_blank', rel: 'noopener noreferrer', text: 'Abrir site ou Instagram' }));
       if (p.ultimoContato) rap.append(el('span', { text: 'Último contato: ' + dataCurta(p.ultimoContato) }));
       if (autor) rap.append(el('span', { text: 'Cadastrado por ' + autor }));
+      if (p.clienteDesde) rap.append(el('span', { text: 'Cliente desde ' + dataCurta(p.clienteDesde) }));
       if (p.cnpj) rap.append(el('span', { text: 'CNPJ ' + PP.docFormatado(p.cnpj) + (p.razaoSocial && p.razaoSocial !== p.empresa ? ' · ' + p.razaoSocial : '') }));
       if (p.endereco) rap.append(el('span', { text: p.endereco }));
     }
@@ -332,6 +423,7 @@
     d.status = $('f-status').value;
     d.proximo_contato = parse(prox) ? prox : null;
     d.observacoes = $('f-obs').value.trim();
+    if (podeTrocarResp() && $('f-resp').value) d.responsavel = $('f-resp').value;
     var id = st.editId, btn = $('ficha-salvar');
     var op = id ? sb.from('prospects').update(d).eq('id', id).select().single()
                 : sb.from('prospects').insert(d).select().single();
@@ -408,7 +500,7 @@
   function csv() {
     var cols = [['Empresa', 'empresa'], ['Contato', 'contato'], ['Cargo', 'cargo'], ['Telefone', 'telefone'], ['E-mail', 'email'], ['Cidade', 'cidade'], ['UF', 'uf'],
       ['Segmento', 'segmento'], ['Porte', 'porte'], ['Origem', 'origem'], ['Site ou Instagram', 'link'], ['Interesse', 'interesse'], ['Status', 'status'],
-      ['Último contato', 'ultimoContato'], ['Próximo contato', 'proximoContato'], ['Observações', 'observacoes'], ['Histórico', 'historico'], ['Cadastrado por', 'userId']];
+      ['Último contato', 'ultimoContato'], ['Próximo contato', 'proximoContato'], ['Observações', 'observacoes'], ['Histórico', 'historico'], ['Cadastrado por', 'userId'], ['Responsável', 'responsavel'], ['Cliente desde', 'clienteDesde']];
     function cel(v) {
       v = String(v == null ? '' : v);
       if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;   // evita que a planilha trate o texto como fórmula
@@ -419,7 +511,7 @@
       linhas.push(cols.map(function (c) {
         var v = p[c[1]];
         if (c[1] === 'status') v = statusDe(v).nome;
-        else if (c[1] === 'userId') v = st.nomes[v] || '';
+        else if (c[1] === 'userId' || c[1] === 'responsavel') v = st.nomes[v] || '';
         else if (c[1] === 'historico') v = v.map(function (h) { return [h.data, h.canal, h.nota].filter(Boolean).join(' - '); }).join(' | ');
         return cel(v);
       }).join(';'));
@@ -447,7 +539,9 @@
     return sb.rpc('equipe_listar').then(function (r) {
       st.equipe = checar(r); st.nomes = {};
       st.equipe.membros.forEach(function (m) { st.nomes[m.id] = m.nome || m.email; });
+      preencherFiltroResp();
       if (st.visao === 'equipe') renderEquipe();
+      else if (st.visao === 'contatos') render();
     }).catch(function () { st.equipe = st.equipe || { membros: [], convites: [], pode_gerenciar: false, erro: true }; if (st.visao === 'equipe') renderEquipe(); });
   }
   // caixinhas de permissão: devolve o bloco pronto; ler com lerPermissoes(bloco)
@@ -470,7 +564,7 @@
   function resumoPermissoes(v) {
     var ve = [], faz = [];
     if (!v) return '';
-    ve.push(v.ver_todos ? 'os contatos de toda a equipe' : 'só os contatos que cadastrou');
+    ve.push(v.ver_todos ? 'os contatos de toda a equipe' : 'só os contatos que cadastrou ou dos quais é responsável');
     if (v.ver_painel) ve.push('o painel');
     if (v.ver_equipe) ve.push('a equipe');
     if (v.ver_empresa) ve.push('os dados da empresa');
@@ -655,6 +749,9 @@
           return;
         }
         st.usuario = u; st.empresa = emp; st.simulando = !!ses.simulando; st.perm = ses.permissoes || {};
+        st.modoContatos = lerLocal('visao-contatos') === 'kanban' ? 'kanban' : 'lista';
+        var fechadas = lerLocal('kanban-fechadas');
+        if (fechadas && typeof fechadas === 'object') st.kbFechadas = fechadas;
         $('btn-novo').hidden = !pode('criar');
         $('topo-empresa').textContent = emp.nome;
         $('topo-nome').textContent = u.nome || u.email || '';
@@ -691,6 +788,28 @@
   $('btn-ver-retornos').addEventListener('click', function () { st.filtro = 'todos'; irVisao('contatos'); });
   $('q').addEventListener('input', function () { st.q = this.value; render(); });
   $('filtro-status').addEventListener('change', function () { st.status = this.value; render(); });
+  $('filtro-resp').addEventListener('change', function () { st.resp = this.value; render(); });
+  $('modo-lista').addEventListener('click', function () { trocarModo('lista'); });
+  $('modo-kanban').addEventListener('click', function () { trocarModo('kanban'); });
+  // arrastar e soltar do kanban (HTML5, só no computador; os cartões só ficam arrastáveis com "editar")
+  var quadro = $('kanban');
+  function limparArraste() { quadro.querySelectorAll('.kb-arrastando,.kb-alvo').forEach(function (n) { n.classList.remove('kb-arrastando', 'kb-alvo'); }); }
+  quadro.addEventListener('dragstart', function (ev) {
+    var c = ev.target.closest && ev.target.closest('.kb-card[draggable]'); if (!c) return;
+    st.arrastando = c.dataset.id; ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', c.dataset.id);
+    c.classList.add('kb-arrastando');
+  });
+  quadro.addEventListener('dragend', function () { st.arrastando = ''; limparArraste(); });
+  quadro.addEventListener('dragover', function (ev) {
+    var col = st.arrastando && ev.target.closest && ev.target.closest('.kb-col'); if (!col) return;
+    ev.preventDefault(); ev.dataTransfer.dropEffect = 'move';
+    if (!col.classList.contains('kb-alvo')) { quadro.querySelectorAll('.kb-alvo').forEach(function (n) { n.classList.remove('kb-alvo'); }); col.classList.add('kb-alvo'); }
+  });
+  quadro.addEventListener('drop', function (ev) {
+    var col = st.arrastando && ev.target.closest && ev.target.closest('.kb-col'); if (!col) return;
+    ev.preventDefault();
+    var id = st.arrastando; st.arrastando = ''; limparArraste(); moverPara(id, col.dataset.status);
+  });
   $('ordem').addEventListener('change', function () { st.ordem = this.value; render(); });
   $('btn-limpar').addEventListener('click', limpar);
   $('btn-csv').addEventListener('click', csv);

@@ -149,6 +149,38 @@ div.nome{cursor:default}
   .c-acao{margin-top:4px}
 }
 
+/* ---------- contatos: Lista ou Kanban ---------- */
+.troca-visao{display:inline-flex;border:1px solid var(--line-strong);border-radius:var(--radius-md);overflow:hidden;margin-bottom:16px}
+.troca-btn{appearance:none;background:var(--surface);border:0;min-height:40px;padding:0 18px;font-weight:600;font-size:15px;color:var(--brand);cursor:pointer}
+.troca-btn + .troca-btn{border-left:1px solid var(--line-strong)}
+.troca-btn:hover{background:var(--surface-tint)}
+.troca-btn[aria-pressed="true"]{background:var(--brand);color:var(--on-brand)}
+.kanban{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:16px;align-items:start}
+.kb-col{min-width:0;background:var(--surface-soft);border:1px solid var(--line);border-top:3px solid var(--line-strong);border-radius:var(--radius-lg);display:flex;flex-direction:column;transition:background-color .15s,border-color .15s}
+.kb-c-conversa,.kb-c-proposta{border-top-color:var(--brand)}
+.kb-c-diagnostico{border-top-color:var(--accent)}
+.kb-c-depois{border-top-color:var(--warning)}
+.kb-c-cliente{border-top-color:var(--success)}
+.kb-c-perdido{border-top-color:var(--line)}
+.kb-col.kb-alvo{background:var(--surface-tint);border-color:var(--brand)}
+.kb-cab{appearance:none;background:none;border:0;width:100%;display:flex;align-items:center;gap:8px;min-height:48px;padding:8px 12px;text-align:left;cursor:pointer;color:var(--ink)}
+.kb-cab:hover{background:var(--surface-tint)}
+.kb-titulo{flex:1 1 auto;min-width:0;font-weight:600;font-size:15px;line-height:22px;overflow-wrap:anywhere}
+.kb-n{font-size:14px;font-weight:600;color:var(--ink-muted);font-variant-numeric:tabular-nums}
+.kb-seta{width:20px;text-align:center;font-size:18px;line-height:1;color:var(--ink-muted)}
+.kb-corpo{display:flex;flex-direction:column;gap:8px;padding:0 8px 8px;max-height:70vh;overflow-y:auto;overscroll-behavior:contain}
+.kb-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0;box-shadow:var(--shadow-sm)}
+.kb-card[draggable="true"]{cursor:grab}
+.kb-card.kb-arrastando{opacity:.45}
+.kb-card .nome{font-size:16px;line-height:22px}
+.kb-card .c-prox{text-align:left;font-size:14px;line-height:20px}
+.kb-card .prox .data{display:inline;margin-left:6px}
+.kb-quem{font-size:13px;line-height:18px;color:var(--ink-subtle);overflow-wrap:anywhere}
+.kb-mover{margin-top:6px;width:100%;min-height:40px;padding:0 10px;border:1px solid var(--line-strong);border-radius:var(--radius-md);background:var(--surface);color:var(--brand);font-size:15px;font-weight:600;cursor:pointer}
+.kb-vazio{padding:4px 12px 14px;font-size:14px;line-height:20px;color:var(--ink-subtle)}
+.kb-mais{margin:0 12px 12px;font-size:15px;text-align:left}
+@media (max-width:640px){.kb-corpo{max-height:60vh}}
+
 /* ---------- janelas ---------- */
 dialog{border:0;padding:0;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:min(720px,calc(100% - 32px));background:var(--surface);color:var(--ink)}
 dialog::backdrop{background:rgba(14,34,63,.55)}

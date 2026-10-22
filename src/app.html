@@ -103,6 +103,10 @@
 
     <!-- Contatos -->
     <section id="v-contatos" role="tabpanel" aria-labelledby="aba-contatos" hidden>
+      <div class="troca-visao" role="group" aria-label="Como mostrar os contatos">
+        <button class="troca-btn" type="button" id="modo-lista" aria-pressed="true">Lista</button>
+        <button class="troca-btn" type="button" id="modo-kanban" aria-pressed="false">Kanban</button>
+      </div>
       <div class="toolbar">
         <div class="campo busca">
           <label for="q">Buscar</label>
@@ -111,6 +115,10 @@
         <div class="campo">
           <label for="filtro-status">Status</label>
           <select id="filtro-status"><option value="">Todos</option></select>
+        </div>
+        <div class="campo">
+          <label for="filtro-resp">Responsável</label>
+          <select id="filtro-resp"><option value="">Todos</option><option value="eu">Meus contatos</option></select>
         </div>
         <div class="campo">
           <label for="ordem">Ordenar por</label>
@@ -124,13 +132,14 @@
       </div>
       <div class="resumo">
         <span id="contagem">Carregando os contatos…</span>
-        <span class="dica" id="dica-proprios" hidden>Você vê só os contatos que você cadastrou.</span>
+        <span class="dica" id="dica-proprios" hidden>Você vê só os contatos que você cadastrou ou dos quais é responsável.</span>
         <button class="linkbtn" type="button" id="btn-limpar" hidden>Limpar filtros</button>
       </div>
-      <div class="lista-head" aria-hidden="true">
+      <div class="lista-head" id="lista-head" aria-hidden="true">
         <span>Contato</span><span>Cidade e telefone</span><span>Status</span><span>Próximo contato</span><span></span>
       </div>
       <div class="lista" id="lista"></div>
+      <div class="kanban" id="kanban" hidden></div>
     </section>
 
     <!-- Buscar leads (código em js/buscar.js) -->
@@ -419,6 +428,11 @@
           <div class="campo">
             <label for="f-proximo">Próximo contato</label>
             <input type="date" id="f-proximo">
+          </div>
+          <div class="campo col-2">
+            <label for="f-resp">Responsável pelo contato</label>
+            <select id="f-resp"></select>
+            <p class="dica" id="f-resp-dica" hidden>Só o responsável pela conta troca o responsável do contato.</p>
           </div>
           <div class="campo col-2">
             <div class="chips" id="f-atalhos" role="group" aria-label="Marcar o próximo contato">

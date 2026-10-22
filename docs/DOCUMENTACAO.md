@@ -1,6 +1,6 @@
 # PHAR Prospector — documentação completa
 
-Atualizada em 15 de outubro de 2026.
+Atualizada em 22 de outubro de 2026.
 
 Este documento serve para duas coisas: entender como o sistema funciona hoje e **reconstruir tudo do zero** se alguma conta ou serviço for perdido. Ele fica em três lugares: no repositório do GitHub (`docs/DOCUMENTACAO.md`), dentro do kit de reconstrução (arquivo ZIP) e em PDF.
 
@@ -124,7 +124,8 @@ Regras que valem sempre:
 **Sistema (`/app`)**:
 
 - **Painel**: rosca com os contatos por status, linha com o crescimento da base e a lista "Para falar hoje". Para o responsável, mostra o aviso "Complete o cadastro da empresa" enquanto faltar dado.
-- **Contatos**: lista com busca, filtro por status, ordenação e os quatro números do topo (atrasados, hoje, próximos 7 dias, sem retorno). Cada contato tem ficha, histórico e o botão "Registrar contato". Contatos vindos da Receita mostram CNPJ, razão social e endereço na ficha.
+- **Contatos**: duas visões, **Lista** ou **Kanban** (seletor no topo da aba; a escolha fica guardada no navegador, por usuário). Busca, filtro por status, filtro por responsável ("Meus contatos" ou um colega), ordenação e os quatro números do topo (atrasados, hoje, próximos 7 dias, sem retorno) valem para as duas. Cada contato tem ficha, histórico e o botão "Registrar contato". Contatos vindos da Receita mostram CNPJ, razão social e endereço na ficha. A ficha mostra o **responsável pelo contato** (só o responsável pela conta troca) e, quando fechado, "Cliente desde".
+  - **Kanban**: uma coluna por etapa do funil, com nome e quantidade; "Fechado" e "Sem interesse" começam recolhidas (clique no cabeçalho abre ou recolhe; fica guardado no navegador). O cartão mostra empresa, pessoa, cidade, próximo contato (atrasado em vermelho), responsável e quem cadastrou; clique no nome abre a ficha. Quem tem `editar` arrasta o cartão para outra coluna (computador) ou usa o menu "Mover para…" do cartão (celular e teclado); a gravação é a mesma da ficha (só o status). Até 50 cartões por coluna, com "Ver mais". As colunas quebram em linhas conforme a largura da tela (sem rolagem lateral) e cada coluna rola por dentro.
 - **Buscar leads**: busca empresas na base da Receita por estado, cidades (várias), ramo (CNAE principal ou também secundário), nome, CNPJ, bairro, porte (MEI, ME, EPP, demais), data de abertura, só com telefone e só com e-mail. Resultado em páginas de 50, com contagem total, selo MEI e "Já na lista". O vendedor marca as empresas e clica em "Adicionar à minha lista": elas viram contatos "A contatar", origem "Base da Receita", sem duplicar CNPJ. Só aparece para quem tem a permissão `buscar_leads`. Detalhes na parte 17.
 - **Equipe**: quem usa a conta. O responsável adiciona colaboradores pelo e-mail e marca as permissões nas caixinhas.
 - **Empresa**: cadastro completo da empresa. Só o responsável altera.
@@ -147,7 +148,8 @@ phar-prospector/
 ├── .gitignore                o que não vai para o GitHub (node_modules, dist, .env)
 ├── docs/
 │   ├── DOCUMENTACAO.md       este documento
-│   └── PLANO-PROSPECCAO.md   plano das próximas funções (busca de leads, qualificação, IA)
+│   ├── PLANO-PROSPECCAO.md   plano das próximas funções (busca de leads, qualificação, IA)
+│   └── PLANO-CRM.md          plano para virar CRM: Kanban, excluir, importar, exportação travada, landing page, clientes
 ├── scripts/
 │   ├── gerar-schema.mjs      junta as migrações em supabase/schema-completo.sql
 │   ├── parquet-entrada.js    entrada do pacote vendor/parquet.js (leitor de Parquet do navegador)
@@ -191,6 +193,7 @@ As migrações, na ordem:
 | `20261009190000_dados_da_empresa.sql` | Cadastro completo da empresa |
 | `20261009200000_permissoes_da_equipe.sql` | Permissões por colaborador |
 | `20261015160000_busca_receita.sql` | Colunas de CNPJ no contato, CNPJ único por empresa, permissão `buscar_leads` e as funções da aba Buscar leads |
+| `20261022190000_kanban_responsavel.sql` | Kanban (Fase A do `PLANO-CRM.md`): colunas `responsavel` e `cliente_desde` no contato, gatilho `regras_prospect`, regras de acesso que incluem o responsável e backup com as duas colunas |
 
 ## 7. O banco de dados
 
@@ -233,6 +236,8 @@ O banco tem dois grupos de objetos. O grupo `public` é o que o site alcança. O
 | `id` | identificador |
 | `empresa_id` | empresa dona do contato |
 | `user_id` | quem cadastrou. Se a pessoa for excluída, o contato continua na empresa |
+| `responsavel` | pessoa da equipe que cuida do contato (índice `prospects_responsavel_idx`). Começa em quem cadastrou. Só o responsável pela conta ou o admin em modo simular troca, e só por alguém da mesma empresa (gatilho `regras_prospect`) |
+| `cliente_desde` | data em que o contato virou "Fechado". O banco grava (data de hoje, horário de Brasília) ao mudar para `cliente` e limpa ao sair; o que a tela mandar é ignorado. Edição manual fica para a Fase F do `PLANO-CRM.md` |
 | `empresa`, `contato`, `cargo`, `telefone`, `email`, `cidade`, `uf`, `segmento`, `porte`, `origem`, `link`, `interesse` | dados do contato. Precisa ter empresa ou pessoa de contato |
 | `status` | `novo`, `contatado`, `conversa`, `diagnostico`, `proposta`, `depois`, `cliente` ou `perdido` |
 | `proximo_contato`, `ultimo_contato` | datas do retorno marcado e da última conversa |
@@ -284,12 +289,13 @@ Ações automáticas (gatilhos):
 - Ao criar um login, o banco cria a linha em `profiles`. Se o e-mail não estava autorizado por ninguém, cria também uma empresa nova, pendente, com a pessoa como responsável.
 - Ao cadastrar um contato, o banco grava quem cadastrou e confere o limite da empresa.
 - Ao editar um contato, o banco não deixa trocar a empresa, o autor nem a data de criação.
+- Ao cadastrar ou editar um contato (`regras_prospect`): colaborador que cadastra fica como responsável (mesmo que tente indicar outro); só o responsável pela conta ou o admin simulando troca o responsável (os demais recebem erro de permissão, mesmo com "editar"); o responsável precisa ser da mesma empresa; `cliente_desde` é gravado ou limpo conforme o status.
 
 ### Regras de acesso das tabelas
 
 | Tabela | Ler | Criar | Editar | Excluir |
 |---|---|---|---|---|
-| `prospects` | da própria empresa, com a empresa ativa; sem "ver todos", só os que a pessoa cadastrou | com a permissão "cadastrar" | com a permissão "editar", nos contatos que a pessoa enxerga | com a permissão "excluir", nos contatos que a pessoa enxerga |
+| `prospects` | da própria empresa, com a empresa ativa; sem "ver todos", só os que a pessoa cadastrou ou dos quais é responsável | com a permissão "cadastrar" | com a permissão "editar", nos contatos que a pessoa enxerga (trocar o responsável: só o responsável pela conta) | com a permissão "excluir", nos contatos que a pessoa enxerga |
 | `empresas` | só a própria, com a permissão "ver dados da empresa" | não | só pela função `empresa_salvar` | não |
 | `profiles` | só a própria linha | não | não | não |
 | `convites`, `auditoria` | fora do alcance do site | | | |
@@ -302,14 +308,14 @@ Há três papéis.
 
 **Administrador do sistema** (você). Entra em `/admin`. Libera e bloqueia empresas, simula o acesso de qualquer uma (vê e edita como ela) e baixa o backup. Cada simulação, exportação e mudança de situação fica registrada na auditoria.
 
-**Responsável pela conta** (quem criou a conta da empresa). Pode tudo dentro da empresa: contatos, equipe, permissões e cadastro da empresa.
+**Responsável pela conta** (quem criou a conta da empresa). Pode tudo dentro da empresa: contatos, equipe, permissões e cadastro da empresa. É o único que troca o responsável de um contato.
 
 **Colaborador**. Pode o que o responsável marcou:
 
 | Permissão | Chave no banco | Começa | Vale onde |
 |---|---|---|---|
 | Ver o painel com os gráficos | `ver_painel` | marcada | só na tela |
-| Ver os contatos de toda a equipe | `ver_todos` | marcada | no banco. Desmarcada, a pessoa vê só os contatos que ela mesma cadastrou |
+| Ver os contatos de toda a equipe | `ver_todos` | marcada | no banco. Desmarcada, a pessoa vê, edita e exclui só os contatos que ela mesma cadastrou ou dos quais é responsável |
 | Ver quem faz parte da equipe | `ver_equipe` | marcada | no banco |
 | Ver os dados da empresa | `ver_empresa` | marcada | no banco |
 | Cadastrar contatos | `criar` | marcada | no banco |
@@ -338,7 +344,7 @@ Avisos que o Supabase mostra e que são esperados:
 - "Signed-In Users Can Execute SECURITY DEFINER Function": as funções do site rodam com poder elevado de propósito, e cada uma confere a permissão por dentro.
 - "Leaked Password Protection Disabled": a checagem de senhas vazadas está desligada. Vale ligar em Authentication > Sign In / Providers > Email quando o plano permitir.
 
-Como as regras foram testadas: em cada mudança de banco, um teste cria usuários de mentira, tenta cada ação permitida e proibida e desfaz tudo no fim. Na versão atual foram 22 verificações de permissão no banco real e 28 no banco de teste, todas aprovadas. Na migração da busca na Receita (15 out 2026), mais 11 verificações no banco real: CNPJ repetido pulado, CNPJ inválido barrado, empresa não enxerga CNPJ de outra, sem `buscar_leads` barrado, sem `criar` barrado; tudo desfeito no fim. A regra de excluir contatos foi testada só no banco de teste, porque a ferramenta usada bloqueia comandos de exclusão no banco real.
+Como as regras foram testadas: em cada mudança de banco, um teste cria usuários de mentira, tenta cada ação permitida e proibida e desfaz tudo no fim. Na versão atual foram 22 verificações de permissão no banco real e 28 no banco de teste, todas aprovadas. Na migração da busca na Receita (15 out 2026), mais 11 verificações no banco real: CNPJ repetido pulado, CNPJ inválido barrado, empresa não enxerga CNPJ de outra, sem `buscar_leads` barrado, sem `criar` barrado; tudo desfeito no fim. No Kanban (22 out 2026), mais 16 verificações no banco real, dentro de uma transação desfeita no fim: responsável começa em quem cadastrou, colaborador não consegue se pôr como outro nem trocar o responsável (com ou sem `ver_todos`), responsável de outra empresa barrado, colaborador sem `ver_todos` vê, edita e exclui o contato do qual é responsável e não alcança o do dono, `cliente_desde` gravado ao fechar (ignorando data mandada pela tela) e limpo ao reabrir, outra empresa não enxerga, admin simulando troca. A regra de excluir contatos foi testada só no banco de teste, porque a ferramenta usada bloqueia comandos de exclusão no banco real.
 
 ## 10. Backup
 
@@ -348,7 +354,9 @@ Como as regras foram testadas: em cada mudança de banco, um teste cria usuário
 
 **CSV pelo painel administrativo (manual).** O botão "Baixar backup (CSV)" gera um arquivo com todos os contatos de todas as empresas.
 
-**CSV pela empresa (manual).** Na aba Contatos, "Baixar planilha (CSV)" gera os contatos da própria empresa.
+**CSV pela empresa (manual).** Na aba Contatos, "Baixar planilha (CSV)" gera os contatos da própria empresa (com as colunas Responsável e Cliente desde).
+
+Desde 22 out 2026, `admin_exportar` devolve também `responsavel` (nome) e `cliente_desde`. O CSV do painel admin já traz as duas colunas; na planilha do Google elas aparecem depois que o script `backup/google-planilhas.gs` atualizado for colado de novo no Apps Script (o script antigo continua funcionando, só sem essas colunas).
 
 ### O que o backup não guarda
 
@@ -523,6 +531,8 @@ Fontes: [Supabase, Production Checklist](https://supabase.com/docs/guides/deploy
 - **Nome do produto.** Ainda provisório; falta conferir domínio no registro.br e marca no INPI.
 - **Lembrete diário.** O sistema mostra os retornos do dia na tela, mas não avisa por e-mail nem WhatsApp.
 - **Cobrança.** Ainda não há controle de assinatura; liberar e bloquear empresas é manual.
+- **Plano CRM (`docs/PLANO-CRM.md`).** Fase A (Kanban) feita. Faltam B (excluir pelo cartão e em lote), D (exportação travada), C (importar com aprovação), F (aba Clientes) e E (landing page).
+- **Backup na planilha do Google.** Colar de novo o `backup/google-planilhas.gs` no Apps Script para a planilha ganhar as colunas Responsável e Cliente desde.
 
 ## 16. Histórico
 
@@ -541,7 +551,9 @@ Fontes: [Supabase, Production Checklist](https://supabase.com/docs/guides/deploy
 | 15 out 2026 | logo depois de `1df3474` | Script da Receita converte os arquivos para UTF-8 (havia bytes inválidos). Vercel reconectada ao repositório da `Dev-for-px` (não publicava desde 9 out) |
 | 15 out 2026 | `2f8551a` | Números da primeira carga de MG (2.935.399 empresas, 152,4 MB) |
 | 15 out 2026 | logo depois de `2f8551a` | Busca testada com a base de MG (Pompéu + terapia: 11 empresas em 0,8 s lendo 1 MB; BH só com e-mail: 505 mil em 4 s lendo 4,8 MB). Ajustes: WhatsApp reconhece celular no formato antigo (sem o 9), tipo de logradouro repetido no endereço, lista antiga some quando a busca dá erro |
-| 15 out 2026 | este envio | Base de MG publicada no Hugging Face (`pharconsultoria/phar-receita`); aba Buscar leads liberada para todos com a permissão `buscar_leads`. Ramo casa com o começo das palavras e aceita apelidos comuns (dentista, academia, salão de beleza e mais 46, lista `APELIDOS` em `buscar.js`) |
+| 15 out 2026 | `9c2b42c` | Base de MG publicada no Hugging Face (`pharconsultoria/phar-receita`); aba Buscar leads liberada para todos com a permissão `buscar_leads`. Ramo casa com o começo das palavras e aceita apelidos comuns (dentista, academia, salão de beleza e mais 46, lista `APELIDOS` em `buscar.js`) |
+| 22 out 2026 | `0f55e86` | Plano para virar CRM (`docs/PLANO-CRM.md`), enviado pelo GitHub |
+| 22 out 2026 | este envio | Fase A do plano CRM: aba Contatos com visão Lista ou Kanban (arrastar e soltar, menu "Mover para…", 50 cartões por coluna), responsável pelo contato (`prospects.responsavel`, filtro "Meus contatos", só o responsável pela conta troca, valendo no banco), `prospects.cliente_desde` gravada pelo banco, colaborador sem `ver_todos` passa a alcançar também os contatos dos quais é responsável. Migração `kanban_responsavel`; backup com as duas colunas novas |
 
 ## 17. Base da Receita (aba Buscar leads)
 

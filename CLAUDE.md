@@ -2,7 +2,7 @@
 
 Leia `docs/DOCUMENTACAO.md` antes de qualquer mudança. Ela descreve o sistema inteiro e o passo a passo de reconstrução.
 
-As próximas funções estão especificadas em `docs/PLANO-PROSPECCAO.md`. Implemente uma fase ou item por vez, e marque o item como feito (`[x]`) nesse arquivo ao terminar.
+As próximas funções estão especificadas em `docs/PLANO-PROSPECCAO.md` e `docs/PLANO-CRM.md`. Implemente uma fase ou item por vez, e marque o item como feito (`[x]`) nesse arquivo ao terminar.
 
 ## Regra fixa: toda mudança atualiza a documentação
 

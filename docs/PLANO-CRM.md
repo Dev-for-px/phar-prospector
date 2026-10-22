@@ -1,7 +1,7 @@
 # Plano: transformar o PHAR Prospector em CRM
 
 Criado em 22 de outubro de 2026, a partir da reunião com cliente de 21 out 2026.
-Status: **aprovado pelo Pedro, nada implementado ainda.** Ordem sugerida: A (Kanban), B (excluir), D (trava de exportação), C (importar), F (clientes), E (landing page, por último para usar imagens do sistema pronto). Fica em `docs/PLANO-CRM.md`.
+Status: **aprovado pelo Pedro. Fase A feita em 22 out 2026; as outras ainda não.** Ordem sugerida: A (Kanban), B (excluir), D (trava de exportação), C (importar), F (clientes), E (landing page, por último para usar imagens do sistema pronto). Fica em `docs/PLANO-CRM.md`.
 
 Este arquivo é a especificação para o Claude Code. Antes de cada fase, leia `CLAUDE.md`,
 `docs/DOCUMENTACAO.md` e o código atual (ele pode ter mudado depois deste plano).
@@ -16,22 +16,27 @@ nenhuma chave secreta no código ou no chat, repositório privado.
 
 ## Fase A — Kanban (visão Lista ou Kanban)
 
-- [ ] **A.1 Alternar visão.** Na aba Contatos, um seletor "Lista | Kanban". A escolha fica
+- [x] **A.1 Alternar visão.** Na aba Contatos, um seletor "Lista | Kanban". A escolha fica
   guardada no navegador (`localStorage`, com try/catch) por usuário.
-- [ ] **A.2 Colunas = etapas do funil.** Uma coluna por status, na ordem do funil:
+- [x] **A.2 Colunas = etapas do funil.** Uma coluna por status, na ordem do funil:
   A contatar, Contato feito, Em conversa, Reunião, Proposta enviada, Não é o momento,
   Fechado, Sem interesse. Cabeçalho com nome e quantidade. Colunas "Fechado" e
   "Sem interesse" podem vir recolhidas.
-- [ ] **A.3 Cartão.** Nome da empresa, pessoa, cidade, próximo contato (atrasado em destaque),
-  temperatura se já existir, quem cadastrou. Clique abre a ficha atual.
-- [ ] **A.4 Arrastar e soltar** entre colunas muda o status (mesma gravação que hoje).
+- [x] **A.3 Cartão.** Nome da empresa, pessoa, cidade, próximo contato (atrasado em destaque),
+  temperatura se já existir (ainda não existe, ficou de fora), quem cadastrou. Clique abre a ficha atual.
+- [x] **A.4 Arrastar e soltar** entre colunas muda o status (mesma gravação que hoje).
   Sem biblioteca externa pesada: HTML5 drag and drop no computador e, no celular,
   um menu "Mover para…" no cartão. Respeitar a permissão `editar`: sem ela, não arrasta.
-  Ao mover para "Fechado", perguntar a data de fechamento (opcional).
-- [ ] **A.5 Filtros e busca** da lista valem também para o Kanban (busca, retorno, status, responsável).
-- [ ] **A.6 Responsável pelo contato.** Coluna nova `prospects.responsavel uuid` (pessoa da
+  Ao mover para "Fechado", a tela não pergunta nada: o banco grava `prospects.cliente_desde`
+  (data de hoje) por gatilho quando o status vira "cliente", se estiver vazia, e limpa quando
+  sai de "cliente". A edição dessa data fica para a Fase F. (Decisão do Pedro, 22 out 2026.)
+- [x] **A.5 Filtros e busca** da lista valem também para o Kanban (busca, retorno, status, responsável).
+- [x] **A.6 Responsável pelo contato.** Coluna nova `prospects.responsavel uuid` (pessoa da
   equipe), filtro "Meus contatos". Por padrão, quem cadastrou.
-- [ ] **A.7 Desempenho.** Carregar até o limite atual (10.000) sem travar: desenhar no
+  Só o responsável da empresa (papel dono) e o admin em modo simular trocam o responsável,
+  valendo no banco (gatilho `regras_prospect`). Colaborador sem `ver_todos` vê, edita e exclui
+  os contatos que cadastrou OU dos quais é responsável. (Decisões do Pedro, 22 out 2026.)
+- [x] **A.7 Desempenho.** Carregar até o limite atual (10.000) sem travar: desenhar no
   máximo 50 cartões por coluna com "ver mais".
 
 ## Fase B — Excluir contato
