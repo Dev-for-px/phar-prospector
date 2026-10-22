@@ -1,0 +1,138 @@
+# Plano: transformar o PHAR Prospector em CRM
+
+Criado em 22 de outubro de 2026, a partir da reunião com cliente de 21 out 2026.
+Status: **aprovado pelo Pedro, nada implementado ainda.** Ordem sugerida: A (Kanban), B (excluir), D (trava de exportação), C (importar), F (clientes), E (landing page, por último para usar imagens do sistema pronto). Fica em `docs/PLANO-CRM.md`.
+
+Este arquivo é a especificação para o Claude Code. Antes de cada fase, leia `CLAUDE.md`,
+`docs/DOCUMENTACAO.md` e o código atual (ele pode ter mudado depois deste plano).
+Faça uma fase por vez; ao terminar cada uma, teste, atualize a documentação, marque `[x]` aqui,
+faça commit e envie para a `main`.
+
+Regras de sempre: Supabase no plano gratuito (sem tempo real, sem armazenamento de arquivos),
+toda regra de acesso vale no banco (RLS e funções), CSP sem `style=` nem `<script>` solto,
+nenhuma chave secreta no código ou no chat, repositório privado.
+
+---
+
+## Fase A — Kanban (visão Lista ou Kanban)
+
+- [ ] **A.1 Alternar visão.** Na aba Contatos, um seletor "Lista | Kanban". A escolha fica
+  guardada no navegador (`localStorage`, com try/catch) por usuário.
+- [ ] **A.2 Colunas = etapas do funil.** Uma coluna por status, na ordem do funil:
+  A contatar, Contato feito, Em conversa, Reunião, Proposta enviada, Não é o momento,
+  Fechado, Sem interesse. Cabeçalho com nome e quantidade. Colunas "Fechado" e
+  "Sem interesse" podem vir recolhidas.
+- [ ] **A.3 Cartão.** Nome da empresa, pessoa, cidade, próximo contato (atrasado em destaque),
+  temperatura se já existir, quem cadastrou. Clique abre a ficha atual.
+- [ ] **A.4 Arrastar e soltar** entre colunas muda o status (mesma gravação que hoje).
+  Sem biblioteca externa pesada: HTML5 drag and drop no computador e, no celular,
+  um menu "Mover para…" no cartão. Respeitar a permissão `editar`: sem ela, não arrasta.
+  Ao mover para "Fechado", perguntar a data de fechamento (opcional).
+- [ ] **A.5 Filtros e busca** da lista valem também para o Kanban (busca, retorno, status, responsável).
+- [ ] **A.6 Responsável pelo contato.** Coluna nova `prospects.responsavel uuid` (pessoa da
+  equipe), filtro "Meus contatos". Por padrão, quem cadastrou.
+- [ ] **A.7 Desempenho.** Carregar até o limite atual (10.000) sem travar: desenhar no
+  máximo 50 cartões por coluna com "ver mais".
+
+## Fase B — Excluir contato
+
+Já existe excluir na ficha (permissão `excluir`). Acrescentar:
+- [ ] **B.1** Excluir pelo cartão do Kanban e pela linha da lista (menu "…"), com confirmação.
+- [ ] **B.2 Excluir em lote:** marcar vários na lista e "Excluir selecionados", com confirmação
+  mostrando a quantidade. Só para quem tem `excluir`; o banco já garante.
+- [ ] **B.3** Mensagem de desfazer por alguns segundos não é obrigatória; a confirmação basta.
+
+## Fase C — Importar base, com aprovação do administrador geral
+
+Motivo: proteger o servidor (plano gratuito) e a qualidade da base.
+
+- [ ] **C.1 Tela de importação** na aba Contatos (permissão nova `importar`, desmarcada por padrão
+  para colaborador; o responsável da empresa tem).
+  - Aceita CSV e Excel (.xlsx). Biblioteca servida pelo próprio site (`dist/vendor/` via
+    `build.mjs`), por causa da CSP.
+  - Passos: escolher arquivo → ligar colunas da planilha aos campos do sistema → prévia das
+    10 primeiras linhas → aviso de duplicados (mesmo CNPJ, telefone ou nome) → enviar para aprovação.
+- [ ] **C.2 Fila de aprovação no banco.** Tabela nova (schema `private`) `importacoes`:
+  empresa, quem enviou, nome do arquivo, quantidade de linhas, estado
+  (`pendente`, `aprovada`, `recusada`, `concluida`), motivo da recusa, datas.
+  As linhas ficam em tabela de espera `private.importacao_linhas` (jsonb por linha), nunca direto
+  em `prospects`. Limite por envio (ex.: 2.000 linhas) e o limite de 10.000 contatos por empresa.
+- [ ] **C.3 Painel admin (só administrador geral):** seção "Importações pendentes" com empresa,
+  quantidade, prévia e botões Aprovar / Recusar (com motivo). Aprovar grava em `prospects` por uma
+  função do banco (`admin_importacao_aprovar`), em lotes, pulando duplicados, e apaga as linhas de espera.
+  Registrar em `private.auditoria`.
+- [ ] **C.4 Para o cliente:** na aba Contatos, "Minhas importações" com o estado de cada envio.
+- [ ] **C.5 Limpeza:** linhas de espera de importações recusadas ou com mais de 30 dias somem
+  (função chamada pelo admin ou rotina diária).
+
+## Fase D — Exportação travada, só o administrador geral libera
+
+- [ ] **D.1** Por padrão, **ninguém** exporta, nem o responsável da empresa. O botão
+  "Baixar planilha (CSV)" some.
+- [ ] **D.2** Coluna nova `empresas.exportacao_liberada boolean default false`. Só o administrador
+  geral muda, no painel admin (por empresa: "Liberar exportação" / "Bloquear exportação").
+  Registrar em auditoria.
+- [ ] **D.3** Com a empresa liberada, exporta quem for responsável ou tiver a permissão `exportar`.
+- [ ] **D.4 Trava de verdade:** hoje o CSV é gerado no navegador a partir da lista carregada, então
+  esconder o botão não impede cópia. Para a trava valer, a exportação passa a ser uma função do banco
+  (`exportar_contatos`) que confere `exportacao_liberada` e a permissão, e o navegador só gera o
+  arquivo com o que ela devolver. Registrar cada exportação em auditoria. Avisar na documentação que
+  quem enxerga contatos na tela ainda pode copiá-los à mão.
+- [ ] **D.5** O backup do administrador (`admin_exportar` e planilha do Google) continua igual.
+
+## Fase E — Landing page de vendas (conversão)
+
+Referência estudada: a página do Agendor (CRM brasileiro) — hero com promessa e dois botões,
+prova social logo abaixo, problemas por perfil de cliente, mostra do produto, preços, números,
+integrações, perguntas frequentes e chamada final. Não copiar textos nem visual de concorrentes;
+usar a identidade da PHAR que já está no site.
+
+Estrutura da nova página `/` (`src/index.html`):
+- [ ] **E.1 Hero:** promessa clara de resultado ("Nenhum cliente esquecido: saiba com quem falar hoje
+  e feche mais"), subtítulo de uma linha, botões "Testar grátis" (vai para `/entrar?modo=criar`) e
+  "Falar com especialista" (WhatsApp comercial do Pedro), imagem real do Kanban do sistema.
+- [ ] **E.2 Faixa de confiança:** "Dados separados por empresa", "Feito no Brasil",
+  "Funciona no celular". Sem números inventados: depoimentos e logos só quando houver clientes reais
+  autorizando (deixar o espaço preparado e escondido).
+- [ ] **E.3 Dores → soluções:** 3 blocos (esqueço de retornar; não sei em que pé está cada
+  negociação; não sei o que a equipe está fazendo) com a função que resolve cada um.
+- [ ] **E.4 Como funciona** em 3 passos, com imagens do sistema (Kanban, ficha, painel).
+- [ ] **E.5 Funções:** Kanban e lista, retorno programado, equipe com permissões, painel com
+  gráficos, importação de base, busca de leads (quando a Fase 2 do outro plano estiver pronta).
+- [ ] **E.6 Planos e preços:** cartões de plano com o que inclui. **Os valores são decisão do Pedro**:
+  deixar marcados como "a definir" até ele informar.
+- [ ] **E.7 Perguntas frequentes** (8 a 10): é seguro? meus dados ficam com quem? posso importar
+  minha planilha? funciona no celular? tem fidelidade? como é o suporte? posso cancelar?
+- [ ] **E.8 Chamada final** com os mesmos dois botões e rodapé com contato e links.
+- [ ] **E.9 Técnica:** página leve (sem framework), título e descrição para Google e para
+  compartilhamento no WhatsApp, botão flutuante de WhatsApp, imagens otimizadas, nota alta no
+  PageSpeed no celular. Respeitar a CSP.
+
+## Fase F — Aba Clientes (gestão dos clientes ativos)
+
+Ideia inspirada no ClientX (sistema de gestão de clientes que o Pedro fez para um cliente). Pegar a
+ideia, não copiar o código: o ClientX é entrega de outro cliente, em outro repositório.
+
+- [ ] **F.1 Virar cliente.** Quando um contato vai para "Fechado", ele aparece na aba nova **Clientes**
+  (o contato continua sendo o mesmo registro, com o histórico de prospecção junto).
+  Coluna `prospects.cliente_desde date` preenchida pelo banco (gatilho) ao virar "Fechado".
+- [ ] **F.2 Dados do cliente** (tabela nova `clientes`, ligada ao contato e à empresa, com RLS igual
+  à de `prospects`): o que contratou (produto ou serviço, texto), valor mensal ou do contrato,
+  forma de cobrança, data de início, data de renovação ou fim, situação (`ativo`, `pausado`,
+  `cancelado`, com motivo do cancelamento), responsável na equipe, observações.
+- [ ] **F.3 Acompanhamento:** registro de atendimentos (data, canal, o que foi feito) e
+  "próxima ação" com data, igual ao retorno programado dos contatos.
+- [ ] **F.4 Lista e Kanban de clientes**, com colunas por situação, filtros por responsável e por
+  renovação nos próximos 30 dias.
+- [ ] **F.5 Painel de clientes:** clientes ativos, receita mensal somada, renovações do mês,
+  cancelamentos do mês. Valores só para quem tiver permissão nova `ver_financeiro`.
+- [ ] **F.6 Permissões novas** nas caixinhas da Equipe: `ver_clientes`, `editar_clientes`,
+  `ver_financeiro`. O responsável da empresa tem todas.
+
+## Decisões pendentes do Pedro
+
+1. Valores e nomes dos planos (E.6).
+2. Texto do botão de WhatsApp e mensagem pré-pronta.
+3. Limite de linhas por importação (sugestão: 2.000).
+4. Se o responsável da empresa pode importar sem aprovação depois de um tempo de uso (sugestão: não, por enquanto).
+5. Quais campos do cliente importam mais para os seus clientes (F.2); a lista acima é o ponto de partida.
