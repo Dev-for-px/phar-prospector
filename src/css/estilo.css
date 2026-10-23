@@ -473,3 +473,32 @@ section.suave{background:var(--surface-soft)}
 .bz-tag-ja{background:var(--success-soft);color:var(--success)}
 .bz-paginas{justify-content:center;margin-top:16px}
 @media (max-width:700px){.bz-linha{grid-template-columns:28px minmax(0,1fr)}.bz-contato{grid-column:2}.bz-form{padding:16px}}
+
+/* ---------- importar planilha (js/importar.js) ---------- */
+.imp-passo{display:flex;flex-direction:column;gap:16px;min-width:0}
+.imp-etapa{font-size:12px;line-height:18px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-subtle)}
+.imp-passo input[type=file]{font-size:15px;max-width:100%}
+.imp-mapa{gap:12px 16px}
+.imp-tabela{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius-md);max-width:100%}
+.imp-tabela table{border-collapse:collapse;font-size:14px;line-height:20px;min-width:100%}
+.imp-tabela th,.imp-tabela td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.imp-tabela th{background:var(--surface-soft);font-weight:600}
+.imp-tabela tr:last-child td{border-bottom:0}
+.imp-rep{background:var(--warning-soft);color:var(--warning)}
+.imp-avisos{margin:0;padding:12px 16px 12px 32px;background:var(--warning-soft);color:var(--ink);border-radius:var(--radius-lg);font-size:15px;line-height:22px}
+.imp-declaro{background:var(--surface-soft);border-radius:var(--radius-lg);padding:12px 16px}
+.aviso-ok{background:var(--success-soft);color:var(--success);margin-top:0}
+.imp-minhas{margin-top:16px;border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--surface)}
+.imp-minhas summary{padding:12px 16px;cursor:pointer;font-weight:600;font-size:15px}
+.imp-minhas-lista{padding:0 16px 8px}
+.imp-item{padding:10px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:2px;min-width:0}
+.imp-item-topo{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;justify-content:space-between}
+.imp-item-topo strong{min-width:0;overflow-wrap:anywhere}
+.imp-e-pendente{background:var(--warning-soft);color:var(--warning)}
+.imp-e-concluida,.imp-e-aprovada{background:var(--success-soft);color:var(--success)}
+.imp-e-recusada{background:var(--danger-soft);color:var(--danger)}
+.adm-imp > h2{font-size:20px;line-height:28px;font-weight:600}
+.adm-imp{display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--line-strong);padding-top:16px}
+.adm-imp-item{display:flex;flex-direction:column;gap:8px;padding:16px 0;border-top:1px solid var(--line);min-width:0}
+.adm-imp-recusa{display:flex;flex-direction:column;gap:12px;max-width:560px}
+.adm-imp-recentes summary{cursor:pointer;font-weight:600;font-size:15px;padding:8px 0}

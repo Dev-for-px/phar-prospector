@@ -127,12 +127,16 @@ Regras que valem sempre:
 - **Contatos**: duas visões, **Lista** ou **Kanban** (seletor no topo da aba; a escolha fica guardada no navegador, por usuário). Busca, filtro por status, filtro por responsável ("Meus contatos" ou um colega), ordenação e os quatro números do topo (atrasados, hoje, próximos 7 dias, sem retorno) valem para as duas. Cada contato tem ficha, histórico e o botão "Registrar contato". Contatos vindos da Receita mostram CNPJ, razão social e endereço na ficha. A ficha mostra o **responsável pelo contato** (só o responsável pela conta troca) e, quando fechado, "Cliente desde".
   - **Kanban**: uma coluna por etapa do funil, com nome e quantidade; "Fechado" e "Sem interesse" começam recolhidas (clique no cabeçalho abre ou recolhe; fica guardado no navegador). O cartão mostra empresa, pessoa, cidade, próximo contato (atrasado em vermelho), responsável e quem cadastrou; clique no nome abre a ficha. Quem tem `editar` arrasta o cartão para outra coluna (computador) ou usa o menu "Mover para…" do cartão (celular e teclado); a gravação é a mesma da ficha (só o status). Até 50 cartões por coluna, com "Ver mais". As colunas quebram em linhas conforme a largura da tela (sem rolagem lateral) e cada coluna rola por dentro.
   - **Excluir** (só para quem tem `excluir`): o botão "…" da linha da lista e do cartão do Kanban tem "Excluir", com confirmação. Na Lista, cada linha tem uma caixinha e há "Marcar todos os visíveis"; com algo marcado aparece a barra "N selecionados · Excluir selecionados · Desmarcar", que acompanha a rolagem. A seleção vale só para o que está na tela: mudar busca ou filtro desmarca o que sumiu, e tudo é desmarcado depois de excluir ou ao trocar para o Kanban. A confirmação mostra a quantidade; **acima de 50 contatos** pede para digitar EXCLUIR antes de liberar o botão; se a seleção tiver **clientes fechados**, avisa "Inclui N clientes fechados" e oferece "Excluir só os que não são clientes" (marcada de início) ou "Excluir todos". Um contato é apagado direto na tabela; vários vão pela função `prospects_excluir_lote`, que grava na auditoria. Se o banco recusar algum, o aviso diz quantos ficaram de fora. Não há "desfazer".
+  - **Importar planilha** (só para quem tem `importar`): botão na barra da aba Contatos. Aceita Excel (.xlsx) ou CSV, até 2.000 linhas, com os títulos na primeira linha. Três passos: escolher o arquivo; ligar cada campo do sistema a uma coluna da planilha (o sistema já sugere pelo título: "Celular" vira Telefone, "Município" vira Cidade etc.); ver a prévia das 10 primeiras linhas como vão ficar. A prévia avisa quantas linhas ficam de fora sem nome, quantos e-mails e CNPJs inválidos vão em branco e quantos contatos parecem repetidos (mesmo CNPJ, telefone ou nome, na lista que a pessoa enxerga ou dentro da planilha). Para enviar, a pessoa marca "Declaro que estes contatos foram obtidos de forma legítima e que posso usá-los para contato comercial". Nada entra direto na lista: vai para a aprovação da PHAR. Arquivo .xls antigo ou outro formato: a tela pede para salvar como .xlsx ou CSV.
+  - **Minhas importações**: caixa recolhível na aba Contatos, para quem tem `importar`, com o estado de cada envio (Aguardando aprovação; Concluída, com quantos entraram e quantos repetidos ficaram de fora; ou Recusada, com o motivo). O responsável vê os envios de toda a empresa; o colaborador, só os dele. Aparece só quando já houve algum envio.
   - **Baixar planilha (CSV)**: só aparece se a PHAR liberou a exportação para a empresa (parte 8) e a pessoa é o responsável ou tem a permissão `exportar`. Os dados vêm da função `exportar_contatos`, que confere tudo no banco e registra a exportação; a planilha traz os contatos que a pessoa enxerga, com Responsável, Cadastrado por, Cliente desde e CNPJ. Se o prazo vencer com a tela aberta, o botão some e aparece o aviso de que a exportação não está liberada.
 - **Buscar leads**: busca empresas na base da Receita por estado, cidades (várias), ramo (CNAE principal ou também secundário), nome, CNPJ, bairro, porte (MEI, ME, EPP, demais), data de abertura, só com telefone e só com e-mail. Resultado em páginas de 50, com contagem total, selo MEI e "Já na lista". O vendedor marca as empresas e clica em "Adicionar à minha lista": elas viram contatos "A contatar", origem "Base da Receita", sem duplicar CNPJ. Só aparece para quem tem a permissão `buscar_leads`. Detalhes na parte 17.
 - **Equipe**: quem usa a conta. O responsável adiciona colaboradores pelo e-mail e marca as permissões nas caixinhas.
 - **Empresa**: cadastro completo da empresa. Só o responsável altera.
 
 **Painel administrativo (`/admin`)**: só para a conta administradora. Mostra números gerais, gráficos de todas as empresas e a lista de empresas com os botões Liberar, Recusar, Bloquear, Reativar e Simular, além de "Baixar backup (CSV)". Cada empresa tem também a linha **Exportação de contatos**, com o selo da situação ("Bloqueada", "Liberada sem prazo", "Liberada até 23/10 às 20:03" ou "Prazo vencido em …") e os botões "Liberar sem prazo", "Liberar por 24 horas" (ou "Mais 24 horas", que renova o prazo) e "Bloquear exportação".
+
+No topo do `/admin` fica a seção **Importações pendentes** (aparece quando há alguma importação): para cada envio, a empresa, o arquivo, quantas linhas, quem enviou e quando, a data da declaração de origem, quantos contatos a empresa já tem (com alerta se puder passar de 10.000) e a prévia das 10 primeiras linhas já limpas. Botões **Aprovar N contatos** e **Recusar**, que pede o motivo (o cliente vê). Abaixo, "Últimas importações decididas" mostra as 10 mais recentes. Abrir o `/admin` também faz a limpeza: envio pendente há mais de 30 dias vence (vira recusado com o motivo "Venceu: 30 dias sem análise.") e as linhas de espera de envios decididos ou vencidos são apagadas.
 
 Status de um contato, na ordem do funil: A contatar, Contato feito, Em conversa, Reunião ou diagnóstico, Proposta enviada, Não é o momento, Fechado, Sem interesse.
 
@@ -156,6 +160,8 @@ phar-prospector/
 │   ├── gerar-schema.mjs      junta as migrações em supabase/schema-completo.sql
 │   ├── parquet-entrada.js    entrada do pacote vendor/parquet.js (leitor de Parquet do navegador)
 │   └── receita/              base da Receita: processar.py, enviar.py, requirements.txt e README.md (parte 17)
+├── vendor/
+│   └── xlsx-0.20.3.mini.min.js  leitor de Excel (SheetJS 0.20.3, baixado uma vez de cdn.sheetjs.com, versão fixa)
 ├── backup/
 │   └── google-planilhas.gs   script do backup no Google Planilhas
 ├── supabase/
@@ -174,14 +180,15 @@ phar-prospector/
         ├── entrar.js         tela de entrar
         ├── app.js            o sistema (painel, contatos, equipe, empresa)
         ├── buscar.js         aba Buscar leads (lê a base da Receita e adiciona à lista)
+        ├── importar.js       importar planilha (Excel ou CSV) e "Minhas importações"
         ├── admin.js          painel administrativo
         ├── graficos.js       gráficos de rosca e de linha, sem biblioteca externa
         └── grade.js          desenho da grade de pontos da marca
 ```
 
-Dependências: `@supabase/supabase-js` 2.45.4, que conversa com o banco; `hyparquet` 1.31.2 e `fzstd` 0.1.1, que leem e descompactam a base da Receita no navegador (JavaScript puro, sem WebAssembly); e `esbuild` 0.23.1, que minifica o código no build. Não há framework.
+Dependências: `@supabase/supabase-js` 2.45.4, que conversa com o banco; `hyparquet` 1.31.2 e `fzstd` 0.1.1, que leem e descompactam a base da Receita no navegador (JavaScript puro, sem WebAssembly); `esbuild` 0.23.1, que minifica o código no build; e a SheetJS 0.20.3 (versão "mini", ~280 KB), que lê planilhas do Excel na importação. A SheetJS não vem do npm (a versão de lá está parada e tem falhas conhecidas): o arquivo foi baixado uma vez do site oficial (`https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.mini.min.js`, SHA-256 `0cb353f830d7288385492c83d277b058ddeac664ca51cf1393aa1fd3e2b70939`) e fica guardado em `vendor/`. Para trocar de versão, baixe o arquivo novo do mesmo lugar e mude o nome em `vendor/` e no `build.mjs`. Não há framework.
 
-O que o `build.mjs` faz: copia `src/` para `dist/`, copia a biblioteca do Supabase para `dist/vendor/`, monta `dist/vendor/parquet.js` (hyparquet + fzstd, ~62 KB) e minifica os arquivos de `js/` e `css/`. O site publicado recebe o código minificado; o código legível fica só no repositório privado.
+O que o `build.mjs` faz: copia `src/` para `dist/`, copia a biblioteca do Supabase para `dist/vendor/`, copia o leitor de Excel para `dist/vendor/xlsx.mini.min.js` (o site só o carrega quando alguém escolhe um arquivo .xlsx), monta `dist/vendor/parquet.js` (hyparquet + fzstd, ~62 KB) e minifica os arquivos de `js/` e `css/`. O site publicado recebe o código minificado; o código legível fica só no repositório privado.
 
 As migrações, na ordem:
 
@@ -198,6 +205,7 @@ As migrações, na ordem:
 | `20261022190000_kanban_responsavel.sql` | Kanban (Fase A do `PLANO-CRM.md`): colunas `responsavel` e `cliente_desde` no contato, gatilho `regras_prospect`, regras de acesso que incluem o responsável e backup com as duas colunas |
 | `20261022200000_excluir_lote.sql` | Excluir em lote (Fase B do `PLANO-CRM.md`): função `prospects_excluir_lote` e registro `excluir_lote` na auditoria |
 | `20261022210000_exportacao_travada.sql` | Exportação travada (Fase D do `PLANO-CRM.md`): colunas `exportacao_liberada` e `exportacao_ate` na empresa, funções `exportar_contatos` e `admin_exportacao`, `minha_sessao` e `admin_empresas` informando a situação da exportação |
+| `20261022220000_importacao_aprovada.sql` | Importar com aprovação (Fase C do `PLANO-CRM.md`): permissão `importar`, tabelas `private.importacoes` e `private.importacao_linhas`, funções `importacao_enviar`, `importacoes_minhas`, `admin_importacoes`, `admin_importacao_aprovar` e `admin_importacao_recusar`, conferência de CNPJ no banco (`private.cnpj_valido`) e exceção da importação nos gatilhos `limite_prospects` e `regras_prospect` |
 
 ## 7. O banco de dados
 
@@ -256,14 +264,18 @@ O banco tem dois grupos de objetos. O grupo `public` é o que o site alcança. O
 
 **`private.convites`** — e-mails autorizados pelo responsável. Colunas: `empresa_id`, `email` (único), `estado` (`pendente`, `aceito`, `cancelado`), `permissoes`, `criado_por`, `criado_em`. O convite não é apagado: muda de estado.
 
-**`private.auditoria`** — registro de ações: `admin_id` (quem fez), `acao`, `empresa_id`, `detalhe`, `criado_em`. Ações do administrador: `status`, `simular_inicio`, `simular_fim`, `exportar` (backup geral) e `exportacao` (liberar ou bloquear a exportação de uma empresa; `detalhe` diz `liberar`, `liberar_24h até DD/MM/AAAA HH:MM` ou `bloquear`). Ações dos usuários: `exportar_contatos` (cada planilha baixada; quem, empresa e `contatos=N` no detalhe) e `excluir_lote`, descrita a seguir. Desde 22 out 2026, `excluir_lote`: cada exclusão em lote feita por qualquer usuário grava quem excluiu (em `admin_id`, apesar do nome), a empresa e, em `detalhe`, `excluidos=N; pedidos=M`. Os dados excluídos não são guardados. Para ver no SQL Editor do Supabase:
+**`private.importacoes`** — envios de planilha aguardando ou já decididos. Colunas: `empresa_id`, `enviado_por`, `arquivo` (nome), `linhas` (até 2.000), `estado` (`pendente`, `recusada` ou `concluida`; `aprovada` existe na regra mas não é usada, porque a aprovação grava tudo na hora e já marca `concluida`), `motivo` (da recusa), `declarado_por` e `declarado_em` (a declaração de origem legítima: quem marcou e quando), `inseridos` e `pulados` (resultado da aprovação), `decidido_por`, `decidido_em`, `criado_em`. O registro do envio não é apagado.
+
+**`private.importacao_linhas`** — fila de espera: uma linha da planilha por registro (`importacao_id`, `n`, `dados` em jsonb), já limpa. É apagada ao aprovar, ao recusar ou depois de 30 dias. Os contatos nunca vão direto para `prospects`.
+
+**`private.auditoria`** — registro de ações: `admin_id` (quem fez), `acao`, `empresa_id`, `detalhe`, `criado_em`. Ações do administrador: `status`, `simular_inicio`, `simular_fim`, `exportar` (backup geral) e `exportacao` (liberar ou bloquear a exportação de uma empresa; `detalhe` diz `liberar`, `liberar_24h até DD/MM/AAAA HH:MM` ou `bloquear`). Ações dos usuários: `exportar_contatos` (cada planilha baixada; quem, empresa e `contatos=N` no detalhe) e `excluir_lote`, descrita a seguir. Importação: `importacao_aprovada` (`linhas=N; inseridos=X; pulados=Y`) e `importacao_recusada` (`linhas=N; motivo=…`), com o administrador em `admin_id`. Desde 22 out 2026, `excluir_lote`: cada exclusão em lote feita por qualquer usuário grava quem excluiu (em `admin_id`, apesar do nome), a empresa e, em `detalhe`, `excluidos=N; pedidos=M`. Os dados excluídos não são guardados. Para ver no SQL Editor do Supabase:
 
 ```sql
 select a.criado_em, p.nome as quem, e.nome as empresa, a.detalhe
 from private.auditoria a
 left join public.profiles p on p.id = a.admin_id
 left join public.empresas e on e.id = a.empresa_id
-where a.acao in ('excluir_lote', 'exportar_contatos', 'exportacao')
+where a.acao in ('excluir_lote', 'exportar_contatos', 'exportacao', 'importacao_aprovada', 'importacao_recusada')
 order by a.criado_em desc;
 ```
 
@@ -272,6 +284,7 @@ order by a.criado_em desc;
 - 10.000 contatos por empresa.
 - 20 pessoas por equipe, contando os e-mails autorizados que ainda não se cadastraram.
 - 200 registros de conversa por contato.
+- Importação: até 2.000 linhas por envio e até 3 envios aguardando aprovação por empresa. Envio que faria a empresa passar de 10.000 contatos é recusado já no envio; na aprovação, o banco confere de novo, sem contar os repetidos.
 
 ### Funções que o site chama
 
@@ -294,18 +307,23 @@ Todas exigem login. Cada uma confere, dentro do banco, se quem chamou tem permis
 | `admin_exportar()` | administrador | Todos os dados de todas as empresas, para o backup. Não depende da trava de exportação |
 | `admin_exportacao(alvo, modo)` | administrador | Liberar (`liberar`), liberar por 24 horas (`liberar_24h`) ou bloquear (`bloquear`) a exportação de contatos de uma empresa. Grava na auditoria |
 | `exportar_contatos()` | responsável ou quem tem `exportar`, com a empresa liberada | Devolve os contatos que a pessoa enxerga, para a planilha. Roda com o login de quem chamou (valem as regras da tabela) e grava cada exportação na auditoria. O admin em modo simular segue a regra da empresa simulada: sem liberação, também não exporta |
+| `importacao_enviar(p_arquivo, p_linhas, p_declaro)` | responsável ou quem tem `importar`, com a empresa ativa | Põe a planilha na fila de aprovação. Exige `p_declaro = true` e guarda quem declarou e quando. Limpa cada linha (telefone só com números; e-mail em minúsculas, inválido fica vazio; CNPJ conferido pelos dígitos, inválido fica vazio; UF só se existir; textos cortados no tamanho da tabela) e descarta linha sem empresa nem pessoa. Recusa mais de 2.000 linhas, o 4º envio pendente e o que passaria de 10.000 contatos |
+| `importacoes_minhas()` | responsável ou quem tem `importar` | Os 20 envios mais recentes: da empresa toda para o responsável, só os próprios para o colaborador |
+| `admin_importacoes()` | administrador | Faz a limpeza (vencidos e linhas antigas) e devolve os envios pendentes, com prévia de 10 linhas, e os 10 últimos decididos |
+| `admin_importacao_aprovar(p_id)` | administrador | Grava as linhas em `prospects` como "A contatar", origem "Importação", com "Importado em DD/MM/AAAA (planilha "nome")." no começo das observações. Quem enviou fica como "cadastrado por" e responsável (se saiu da empresa, o contato fica sem os dois). Pula repetidos: mesmo CNPJ, mesmo telefone (8 números ou mais) ou mesmo nome (empresa, ou pessoa se não houver empresa) já na lista da empresa ou antes na própria planilha. Se não couber no limite de 10.000, não grava nada e avisa quanto espaço há. Apaga as linhas de espera e grava na auditoria |
+| `admin_importacao_recusar(p_id, p_motivo)` | administrador | Recusa com motivo obrigatório (até 300 letras), apaga as linhas de espera e grava na auditoria |
 | `prospects_cnpjs_existentes(p_cnpjs)` | quem tem `buscar_leads` | Diz quais destes CNPJs já estão na lista da empresa (só os CNPJs, nenhum outro dado), para marcar "Já na lista". Até 1.000 por vez |
 | `prospects_adicionar_lote(p_linhas)` | quem tem `buscar_leads` e `criar` | Adiciona até 200 empresas de uma vez como contatos "A contatar". Roda com o login de quem chamou, então valem as regras da tabela e o limite de 10 mil. CNPJ repetido é pulado e contado |
 | `prospects_excluir_lote(p_ids)` | quem tem `excluir` | Exclui até 10.000 contatos de uma vez. Roda com o login de quem chamou: valem as regras da tabela, e o que a pessoa não alcança é pulado e contado. Devolve `excluidos` e `pulados` e, se excluiu algum, grava uma linha `excluir_lote` na auditoria (função de apoio `private.registrar_exclusao`) |
 
 Os contatos não passam por função (exceto a adição em lote da aba Buscar leads e a exclusão em lote): o site lê e grava direto na tabela `prospects`, e as regras da tabela decidem o que cada pessoa alcança. O cadastro da empresa é lido direto da tabela `empresas`.
 
-Funções de apoio (grupo `private`): `minha_empresa()`, `conta_ativa()`, `sou_dono()`, `em_simulacao()`, `is_admin()`, `pode(chave)`, `permissoes_padrao()`, `permissoes_limpas()`, `empresa_completa()`, `nome_empresa_padrao()`. `equipe_convidar(p_email)` continua existindo, mas só é chamada por dentro de `equipe_autorizar`.
+Funções de apoio (grupo `private`): `minha_empresa()`, `conta_ativa()`, `sou_dono()`, `em_simulacao()`, `is_admin()`, `pode(chave)`, `permissoes_padrao()`, `permissoes_limpas()`, `empresa_completa()`, `nome_empresa_padrao()`, `cnpj_valido()`, `importacao_linha_limpa()`, `importando()`. `equipe_convidar(p_email)` continua existindo, mas só é chamada por dentro de `equipe_autorizar`.
 
 Ações automáticas (gatilhos):
 
 - Ao criar um login, o banco cria a linha em `profiles`. Se o e-mail não estava autorizado por ninguém, cria também uma empresa nova, pendente, com a pessoa como responsável.
-- Ao cadastrar um contato, o banco grava quem cadastrou e confere o limite da empresa.
+- Ao cadastrar um contato, o banco grava quem cadastrou e confere o limite da empresa. Exceção: dentro de `admin_importacao_aprovar` (que liga a marca `pp.importando` só naquela transação; ela só vale se quem chamou for administrador, conferido por `private.importando()`), o banco mantém quem enviou a planilha como autor e responsável, e o limite já foi conferido antes, de uma vez. Um usuário comum não consegue usar essa exceção (testado).
 - Ao editar um contato, o banco não deixa trocar a empresa, o autor nem a data de criação.
 - Ao cadastrar ou editar um contato (`regras_prospect`): colaborador que cadastra fica como responsável (mesmo que tente indicar outro); só o responsável pela conta ou o admin simulando troca o responsável (os demais recebem erro de permissão, mesmo com "editar"); o responsável precisa ser da mesma empresa; `cliente_desde` é gravado ou limpo conforme o status.
 
@@ -316,7 +334,7 @@ Ações automáticas (gatilhos):
 | `prospects` | da própria empresa, com a empresa ativa; sem "ver todos", só os que a pessoa cadastrou ou dos quais é responsável | com a permissão "cadastrar" | com a permissão "editar", nos contatos que a pessoa enxerga (trocar o responsável: só o responsável pela conta) | com a permissão "excluir", nos contatos que a pessoa enxerga |
 | `empresas` | só a própria, com a permissão "ver dados da empresa" | não | só pela função `empresa_salvar` | não |
 | `profiles` | só a própria linha | não | não | não |
-| `convites`, `auditoria` | fora do alcance do site | | | |
+| `convites`, `auditoria`, `importacoes`, `importacao_linhas` | fora do alcance do site (só pelas funções) | | | |
 
 Quem não está logado não lê nem grava nada.
 
@@ -324,7 +342,7 @@ Quem não está logado não lê nem grava nada.
 
 Há três papéis.
 
-**Administrador do sistema** (você). Entra em `/admin`. Libera e bloqueia empresas, simula o acesso de qualquer uma (vê e edita como ela) e baixa o backup. Cada simulação, exportação e mudança de situação fica registrada na auditoria.
+**Administrador do sistema** (você). Entra em `/admin`. Libera e bloqueia empresas, aprova ou recusa importações de planilha, simula o acesso de qualquer uma (vê e edita como ela) e baixa o backup. Cada simulação, exportação e mudança de situação fica registrada na auditoria.
 
 **Responsável pela conta** (quem criou a conta da empresa). Pode tudo dentro da empresa: contatos, equipe, permissões e cadastro da empresa. É o único que troca o responsável de um contato.
 
@@ -340,11 +358,14 @@ Há três papéis.
 | Editar contatos e registrar conversas | `editar` | marcada | no banco |
 | Excluir contatos | `excluir` | desmarcada | no banco |
 | Baixar a planilha de contatos (CSV) | `exportar` | desmarcada | no banco (`exportar_contatos`). Só vale se a PHAR liberar a exportação para a empresa; sem isso, nem o responsável exporta |
+| Importar planilha de contatos | `importar` | desmarcada | no banco (`importacao_enviar` e `importacoes_minhas`). Cada envio só vira contato depois da aprovação da PHAR. Colaboradores que já existiam também começam sem |
 | Buscar leads na base da Receita | `buscar_leads` | marcada | no banco (as duas funções da busca conferem). Para adicionar à lista precisa também de `criar` |
 
 "Só na tela" quer dizer que o sistema esconde a aba ou o botão, mas não é uma trava de dados. A trava de verdade é "ver os contatos de toda a equipe".
 
 **Exportação travada (desde 22 out 2026).** Por padrão nenhuma empresa exporta, nem o responsável. Só o administrador geral libera, no `/admin`, sem prazo ou por 24 horas. Com a empresa liberada, exporta o responsável ou quem tem `exportar`.
+
+**Importação com aprovação (desde 22 out 2026).** Nenhuma planilha entra direto: o responsável ou quem tem `importar` envia, e só o administrador geral aprova. Não há aprovação automática, nem para quem já usa o sistema há tempo (decisão do Pedro).
 
 **Limite da trava.** Ela impede baixar a planilha, mas não impede que alguém leia os contatos que já enxerga: dá para copiar à mão da tela, e quem tem conhecimento técnico consegue consultar o banco direto com o próprio login, porque a lista do sistema precisa dessa leitura para funcionar. O que limita quem vê o quê continua sendo "ver os contatos de toda a equipe". A auditoria registra cada planilha baixada.
 
@@ -357,7 +378,7 @@ Ciclo de uma empresa: nasce **pendente** quando alguém cria conta, fica **ativa
 - **Separação entre empresas no banco.** Cada tabela tem regras (RLS) que o banco aplica em todo pedido. Mesmo que alguém altere o site no próprio navegador, não alcança dados de outra empresa.
 - **Permissões conferidas no banco.** Ver todos os contatos, cadastrar, editar, excluir, ver equipe e ver dados da empresa são decididos pelo banco, não pela tela.
 - **Sem chave secreta no site.** O navegador usa só a chave pública.
-- **Cabeçalhos de segurança** em `vercel.json`: o site só carrega scripts dele mesmo, só se conecta ao próprio Supabase, ao Hugging Face (`huggingface.co` e `*.hf.co`, base da Receita) e à BrasilAPI (consulta de um CNPJ na aba Buscar leads), e não pode ser aberto dentro de outra página. Por causa disso, não se usa `style=` nem `<script>` solto dentro do HTML.
+- **Cabeçalhos de segurança** em `vercel.json`: o site só carrega scripts dele mesmo (por isso o leitor de Excel fica guardado em `vendor/` e é servido pelo próprio site), só se conecta ao próprio Supabase, ao Hugging Face (`huggingface.co` e `*.hf.co`, base da Receita) e à BrasilAPI (consulta de um CNPJ na aba Buscar leads), e não pode ser aberto dentro de outra página. Por causa disso, não se usa `style=` nem `<script>` solto dentro do HTML.
 - **Código minificado.** Dificulta a leitura, mas não é o que protege o sistema. Código que roda no navegador sempre pode ser lido. O que impede a cópia do negócio são o repositório privado e as regras no banco.
 - **Páginas com login não são indexadas** pelo Google (`noindex`) e não ficam guardadas em cache.
 
@@ -366,7 +387,7 @@ Avisos que o Supabase mostra e que são esperados:
 - "Signed-In Users Can Execute SECURITY DEFINER Function": as funções do site rodam com poder elevado de propósito, e cada uma confere a permissão por dentro.
 - "Leaked Password Protection Disabled": a checagem de senhas vazadas está desligada. Vale ligar em Authentication > Sign In / Providers > Email quando o plano permitir.
 
-Como as regras foram testadas: em cada mudança de banco, um teste cria usuários de mentira, tenta cada ação permitida e proibida e desfaz tudo no fim. Na versão atual foram 22 verificações de permissão no banco real e 28 no banco de teste, todas aprovadas. Na migração da busca na Receita (15 out 2026), mais 11 verificações no banco real: CNPJ repetido pulado, CNPJ inválido barrado, empresa não enxerga CNPJ de outra, sem `buscar_leads` barrado, sem `criar` barrado; tudo desfeito no fim. No Kanban (22 out 2026), mais 16 verificações no banco real, dentro de uma transação desfeita no fim: responsável começa em quem cadastrou, colaborador não consegue se pôr como outro nem trocar o responsável (com ou sem `ver_todos`), responsável de outra empresa barrado, colaborador sem `ver_todos` vê, edita e exclui o contato do qual é responsável e não alcança o do dono, `cliente_desde` gravado ao fechar (ignorando data mandada pela tela) e limpo ao reabrir, outra empresa não enxerga, admin simulando troca. Na exclusão em lote (22 out 2026), mais 10 verificações no banco real, desfeitas no fim: sem `excluir` barrado; colaborador sem `ver_todos` que manda 8 contatos (inclusive de outra empresa) exclui só os 2 dele e os outros 6 são contados como pulados; o dono exclui os da empresa e o da outra empresa continua; chamada sem nada para excluir não grava auditoria; o usuário não lê a auditoria; cada exclusão grava uma linha com quem e a contagem; quem não está logado não chama a função. Com isso a regra de excluir contatos também passou a ser testada no banco real (antes, só no banco de teste). Na exportação travada (22 out 2026), mais 21 verificações no banco real, desfeitas no fim: empresa começa bloqueada (até para o responsável) e a sessão informa isso; o responsável não se libera nem pela função nem mexendo na coluna; admin em modo simular também é barrado antes da liberação; liberada, exportam o admin simulando, o responsável (com os nomes certos) e o colaborador com `exportar`; colaborador sem `exportar` é barrado; colaborador sem `ver_todos` exporta só os seus; outra empresa continua barrada; "24 horas" grava o prazo e o painel admin mostra; prazo vencido barra e a sessão passa a dizer bloqueada; bloquear barra de novo; a auditoria registra as 4 mudanças do admin e cada exportação que deu certo (as barradas não); quem não está logado não chama as funções.
+Como as regras foram testadas: em cada mudança de banco, um teste cria usuários de mentira, tenta cada ação permitida e proibida e desfaz tudo no fim. Na versão atual foram 22 verificações de permissão no banco real e 28 no banco de teste, todas aprovadas. Na migração da busca na Receita (15 out 2026), mais 11 verificações no banco real: CNPJ repetido pulado, CNPJ inválido barrado, empresa não enxerga CNPJ de outra, sem `buscar_leads` barrado, sem `criar` barrado; tudo desfeito no fim. No Kanban (22 out 2026), mais 16 verificações no banco real, dentro de uma transação desfeita no fim: responsável começa em quem cadastrou, colaborador não consegue se pôr como outro nem trocar o responsável (com ou sem `ver_todos`), responsável de outra empresa barrado, colaborador sem `ver_todos` vê, edita e exclui o contato do qual é responsável e não alcança o do dono, `cliente_desde` gravado ao fechar (ignorando data mandada pela tela) e limpo ao reabrir, outra empresa não enxerga, admin simulando troca. Na exclusão em lote (22 out 2026), mais 10 verificações no banco real, desfeitas no fim: sem `excluir` barrado; colaborador sem `ver_todos` que manda 8 contatos (inclusive de outra empresa) exclui só os 2 dele e os outros 6 são contados como pulados; o dono exclui os da empresa e o da outra empresa continua; chamada sem nada para excluir não grava auditoria; o usuário não lê a auditoria; cada exclusão grava uma linha com quem e a contagem; quem não está logado não chama a função. Com isso a regra de excluir contatos também passou a ser testada no banco real (antes, só no banco de teste). Na exportação travada (22 out 2026), mais 21 verificações no banco real, desfeitas no fim: empresa começa bloqueada (até para o responsável) e a sessão informa isso; o responsável não se libera nem pela função nem mexendo na coluna; admin em modo simular também é barrado antes da liberação; liberada, exportam o admin simulando, o responsável (com os nomes certos) e o colaborador com `exportar`; colaborador sem `exportar` é barrado; colaborador sem `ver_todos` exporta só os seus; outra empresa continua barrada; "24 horas" grava o prazo e o painel admin mostra; prazo vencido barra e a sessão passa a dizer bloqueada; bloquear barra de novo; a auditoria registra as 4 mudanças do admin e cada exportação que deu certo (as barradas não); quem não está logado não chama as funções. Na importação com aprovação (22 out 2026), mais 24 verificações no banco real, desfeitas no fim: conferência de CNPJ (válido, válido com letras, inválido); colaborador sem `importar` barrado (e `pode` diz não); responsável pode; sem a declaração, barrado; 2.001 linhas barradas; envio de 6 linhas guarda 5 (a sem nome fica de fora) já limpas (telefone só números, e-mail em minúsculas, e-mail e CNPJ inválidos em branco, UF conferida) e com a declaração (quem e quando); o usuário não lê as tabelas da fila; um usuário comum que liga a marca da importação continua gravando em nome próprio; o responsável não chama as funções do admin; o 4º envio pendente é barrado; colaborador vê só os próprios envios, o responsável vê os 3, outra empresa vê 0; o admin vê os pendentes com prévia; envio com mais de 30 dias vence e perde as linhas; aprovar grava 2 e pula 3 (CNPJ repetido na planilha, telefone repetido na planilha e nome já na lista); aprovar de novo é barrado; recusar sem motivo é barrado; contatos entram com origem "Importação", observação com data e planilha, autor e responsável certos (inclusive o colaborador que enviou); linhas de espera apagadas; auditoria com as duas aprovações.
 
 ## 10. Backup
 
@@ -544,7 +565,7 @@ Fontes: [Supabase, Production Checklist](https://supabase.com/docs/guides/deploy
 
 ## 15. Pendências conhecidas
 
-- **Busca de leads.** Busca na base da Receita no ar (só MG, parte 17). Próximos passos pedidos pelo Pedro: busca no Google Maps (raspador no GitHub Actions, com OpenStreetMap de reserva) e seção "Uso e limpeza" no `/admin`. Ainda não feitos do plano: temperatura do lead, importar planilha, status "Não quer contato", IA (`docs/PLANO-PROSPECCAO.md`).
+- **Busca de leads.** Busca na base da Receita no ar (só MG, parte 17). Próximos passos pedidos pelo Pedro: busca no Google Maps (raspador no GitHub Actions, com OpenStreetMap de reserva) e seção "Uso e limpeza" no `/admin`. Ainda não feitos do plano: temperatura do lead, status "Não quer contato", IA (`docs/PLANO-PROSPECCAO.md`).
 - **Base da Receita: atualização mensal manual.** Rodar `scripts/receita/` todo mês (parte 17). Acrescentar UFs além de MG quando sair do teste.
 - **Hospedagem comercial.** O plano gratuito da Vercel é só para uso não comercial; resolver antes de cobrar assinatura.
 - **Restaurar backup.** Falta um caminho pronto para devolver os contatos da planilha ao sistema (parte 13).
@@ -553,9 +574,10 @@ Fontes: [Supabase, Production Checklist](https://supabase.com/docs/guides/deploy
 - **Nome do produto.** Ainda provisório; falta conferir domínio no registro.br e marca no INPI.
 - **Lembrete diário.** O sistema mostra os retornos do dia na tela, mas não avisa por e-mail nem WhatsApp.
 - **Cobrança.** Ainda não há controle de assinatura; liberar e bloquear empresas é manual.
-- **Plano CRM (`docs/PLANO-CRM.md`).** Fases A (Kanban), B (excluir) e D (exportação travada) feitas. Faltam C (importar com aprovação), F (aba Clientes) e E (landing page).
-- **Auditoria sem tela.** Exclusões em lote, exportações e liberações ficam em `private.auditoria`, mas por enquanto só dá para ver pelo SQL Editor (consulta na parte 7).
+- **Plano CRM (`docs/PLANO-CRM.md`).** Fases A (Kanban), B (excluir), C (importar com aprovação) e D (exportação travada) feitas. Faltam F (aba Clientes) e E (landing page).
+- **Auditoria sem tela.** Exclusões em lote, exportações, liberações e importações ficam em `private.auditoria`, mas por enquanto só dá para ver pelo SQL Editor (consulta na parte 7).
 - **Exportação bloqueada para todas as empresas.** Desde a Fase D, nenhuma empresa baixa a planilha até a PHAR liberar no `/admin`. Avisar os clientes que usavam o botão.
+- **Importação: marcar a permissão.** `importar` começa desmarcada para todos os colaboradores; o responsável marca na aba Equipe. O formato antigo .xls não é aceito (só .xlsx e CSV).
 - **Backup na planilha do Google.** Colar de novo o `backup/google-planilhas.gs` no Apps Script para a planilha ganhar as colunas Responsável e Cliente desde.
 
 ## 16. Histórico
@@ -579,7 +601,9 @@ Fontes: [Supabase, Production Checklist](https://supabase.com/docs/guides/deploy
 | 22 out 2026 | `0f55e86` | Plano para virar CRM (`docs/PLANO-CRM.md`), enviado pelo GitHub |
 | 22 out 2026 | `5451749` | Fase A do plano CRM: aba Contatos com visão Lista ou Kanban (arrastar e soltar, menu "Mover para…", 50 cartões por coluna), responsável pelo contato (`prospects.responsavel`, filtro "Meus contatos", só o responsável pela conta troca, valendo no banco), `prospects.cliente_desde` gravada pelo banco, colaborador sem `ver_todos` passa a alcançar também os contatos dos quais é responsável. Migração `kanban_responsavel`; backup com as duas colunas novas |
 | 22 out 2026 | `25122e7` | Fase B do plano CRM: excluir pelo menu "…" da lista e do cartão do Kanban; excluir em lote na Lista (caixinhas, "Marcar todos os visíveis", barra de seleção); acima de 50 pede para digitar EXCLUIR; aviso de clientes fechados com "Excluir só os que não são clientes"; função `prospects_excluir_lote` grava cada exclusão em lote na auditoria (quem, empresa, quantidade). Migração `excluir_lote` |
-| 22 out 2026 | este envio | Fase D do plano CRM: exportação de contatos travada por empresa. Colunas `empresas.exportacao_liberada` e `exportacao_ate`; no `/admin`, "Liberar sem prazo", "Liberar por 24 horas" e "Bloquear exportação", com selo mostrando até quando vale; a planilha passa a vir da função `exportar_contatos` (confere liberação e permissão, admin simulando segue a regra da empresa) e cada exportação vai para a auditoria. Backup geral (`admin_exportar`) sem mudança. Migração `exportacao_travada` |
+| 22 out 2026 | `3712850` | Fase D do plano CRM: exportação de contatos travada por empresa. Colunas `empresas.exportacao_liberada` e `exportacao_ate`; no `/admin`, "Liberar sem prazo", "Liberar por 24 horas" e "Bloquear exportação", com selo mostrando até quando vale; a planilha passa a vir da função `exportar_contatos` (confere liberação e permissão, admin simulando segue a regra da empresa) e cada exportação vai para a auditoria. Backup geral (`admin_exportar`) sem mudança. Migração `exportacao_travada` |
+| 22 out 2026 | — | Kit de reconstrução (ZIP) e PDF gerados de novo, com as Fases A, B e D |
+| 22 out 2026 | este envio | Fase C do plano CRM: importar planilha (Excel .xlsx ou CSV) com aprovação da PHAR. Permissão `importar`; três passos (arquivo, colunas, prévia com repetidos) e declaração de origem legítima guardada com quem e quando; fila no banco (`private.importacoes` e `private.importacao_linhas`), até 2.000 linhas e 3 envios pendentes; no `/admin`, "Importações pendentes" com prévia, Aprovar e Recusar com motivo; a aprovação grava com origem "Importação", data e planilha nas observações, telefone só com números, e-mail e CNPJ conferidos, pulando repetidos; "Minhas importações" na aba Contatos; limpeza de 30 dias ao abrir o `/admin`. Leitor de Excel: SheetJS 0.20.3 baixada do site oficial e guardada em `vendor/`. Migração `importacao_aprovada` |
 
 ## 17. Base da Receita (aba Buscar leads)
 

@@ -1,5 +1,5 @@
 // Monta a pasta dist/ que a Vercel publica.
-// Copia src/, traz a biblioteca do Supabase e o leitor de Parquet para dentro do site e minifica JS e CSS.
+// Copia src/, traz a biblioteca do Supabase, o leitor de Parquet e o leitor de Excel para dentro do site e minifica JS e CSS.
 // O código legível fica só neste repositório (privado); o site público recebe a versão minificada.
 import { rm, mkdir, cp, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -23,6 +23,8 @@ async function minificar(pasta, loader) {
     await writeFile(caminho, code);
   }
 }
+// leitor de Excel da importação (SheetJS, versão fixa baixada de cdn.sheetjs.com e guardada em vendor/)
+await cp('vendor/xlsx-0.20.3.mini.min.js', join(SAIDA, 'vendor', 'xlsx.mini.min.js'));
 // leitor de Parquet da aba Buscar leads (hyparquet + fzstd), num arquivo só
 await build({
   entryPoints: ['scripts/parquet-entrada.js'], bundle: true, format: 'iife', minify: true,

@@ -4,7 +4,7 @@
   'use strict';
   var PP = window.PP, $ = PP.$, el = PP.el, sb = PP.sb, toast = PP.toast, G = PP.graficos;
   var ROTULO = { pendente: 'Aguardando', ativa: 'Ativa', bloqueada: 'Bloqueada' };
-  var st = { empresas: [], painel: null, modo: 'carregando', filtro: '', q: '', confirmando: '' };
+  var st = { empresas: [], painel: null, modo: 'carregando', filtro: '', q: '', confirmando: '', imp: null, recusando: '', impOcupado: '' };
 
   function semAcento(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
   function checar(r) { if (r.error) { r.error.status = r.status; throw r.error; } return r.data; }
@@ -16,6 +16,7 @@
   function estado(titulo, texto) { $('estado-titulo').textContent = titulo; $('estado-texto').textContent = texto; tela('estado'); }
 
   function carregar() {
+    carregarImportacoes();
     return Promise.all([sb.rpc('admin_empresas'), sb.rpc('admin_painel')]).then(function (r) {
       st.empresas = checar(r[0]) || []; st.painel = checar(r[1]); st.modo = 'ok'; $('aviso-erro').hidden = true; render();
     }).catch(function () {
@@ -59,6 +60,91 @@
     return el('div', { class: 'adm-export' },
       el('span', { class: 'adm-export-rot', text: 'Exportação de contatos' }), seloExportacao(e),
       el('div', { class: 'adm-export-acoes' }, botoes));
+  }
+
+  // ---------- importações pendentes (abrir o painel também faz a limpeza das antigas, no banco) ----------
+  var COLS_PREVIA = [['empresa', 'Empresa'], ['contato', 'Pessoa'], ['telefone', 'Telefone'], ['email', 'E-mail'], ['cidade', 'Cidade'], ['uf', 'UF'], ['cnpj', 'CNPJ'], ['segmento', 'Segmento']];
+  var ERROS_IMP = { ja_decidida: 'Esta importação já foi decidida.', nao_encontrada: 'Importação não encontrada.', sem_motivo: 'Escreva o motivo da recusa.',
+    sem_linhas: 'As linhas desta importação não existem mais. Recuse com um motivo.' };
+  function qtd(n, um, varios) { n = Number(n) || 0; return n.toLocaleString('pt-BR') + ' ' + (n === 1 ? um : varios); }
+  function carregarImportacoes() {
+    return sb.rpc('admin_importacoes').then(function (r) { st.imp = checar(r); renderImportacoes(); })
+      .catch(function () { st.imp = null; renderImportacoes(); });
+  }
+  function erroImp(e) {
+    var m = (e && e.message) || '';
+    if (m === 'sem_espaco') {
+      var livre = /livre=(\d+)/.exec((e && e.details) || '');
+      return 'Não cabe: a empresa só tem espaço para ' + (livre ? qtd(livre[1], 'contato novo', 'contatos novos') : 'poucos contatos novos') + ' (limite de 10.000).';
+    }
+    return ERROS_IMP[m] || 'Não deu para concluir agora. Tente de novo.';
+  }
+  function aprovar(i) {
+    st.impOcupado = i.id; renderImportacoes();
+    sb.rpc('admin_importacao_aprovar', { p_id: i.id }).then(function (r) {
+      var x = checar(r);
+      toast('Importação aprovada: ' + qtd(x.inseridos, 'contato entrou', 'contatos entraram') + (x.pulados ? ', ' + qtd(x.pulados, 'repetido pulado', 'repetidos pulados') : ''));
+    }).catch(function (e) { toast(erroImp(e)); })
+      .then(function () { st.impOcupado = ''; return carregar(); });
+  }
+  function recusar(i, motivo) {
+    st.impOcupado = i.id; renderImportacoes();
+    sb.rpc('admin_importacao_recusar', { p_id: i.id, p_motivo: motivo }).then(function (r) { checar(r); st.recusando = ''; toast('Importação recusada'); })
+      .catch(function (e) { toast(erroImp(e)); })
+      .then(function () { st.impOcupado = ''; return carregarImportacoes(); });
+  }
+  function previa(linhas) {
+    var cols = COLS_PREVIA.filter(function (c) { return linhas.some(function (l) { return l[c[0]]; }); });
+    if (!linhas.length) return el('p', { class: 'dica', text: 'Sem prévia.' });
+    return el('div', { class: 'imp-tabela', tabindex: '0', role: 'region', 'aria-label': 'Primeiras linhas da planilha' },
+      el('table', null,
+        el('thead', null, el('tr', null, cols.map(function (c) { return el('th', { scope: 'col', text: c[1] }); }))),
+        el('tbody', null, linhas.map(function (l) {
+          return el('tr', null, cols.map(function (c) { return el('td', { text: c[0] === 'cnpj' && l.cnpj ? PP.docFormatado(l.cnpj) : (l[c[0]] || '') }); }));
+        }))));
+  }
+  function cartaoImportacao(i) {
+    var ocupado = st.impOcupado === i.id, depois = (Number(i.contatos_empresa) || 0) + (Number(i.linhas) || 0), botoes;
+    if (st.recusando === i.id) {
+      var campo = el('input', { type: 'text', id: 'imp-motivo-' + i.id, maxlength: '300', autocomplete: 'off', placeholder: 'Ex.: planilha sem origem clara' });
+      botoes = el('div', { class: 'adm-imp-recusa' },
+        el('div', { class: 'campo' }, el('label', { for: 'imp-motivo-' + i.id, text: 'Motivo da recusa (o cliente vê)' }), campo),
+        el('div', { class: 'acoes' },
+          el('button', { class: 'btn btn-danger btn-sm', type: 'button', text: 'Confirmar recusa', disabled: ocupado, onclick: function () {
+            if (!campo.value.trim()) { campo.focus(); toast('Escreva o motivo da recusa'); return; }
+            recusar(i, campo.value.trim());
+          } }),
+          el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Cancelar', onclick: function () { st.recusando = ''; renderImportacoes(); } })));
+      setTimeout(function () { campo.focus(); }, 0);
+    } else {
+      botoes = el('div', { class: 'acoes' },
+        el('button', { class: 'btn btn-primary btn-sm', type: 'button', text: ocupado ? 'Aprovando…' : 'Aprovar ' + qtd(i.linhas, 'contato', 'contatos'), disabled: ocupado, onclick: function () { aprovar(i); } }),
+        el('button', { class: 'btn btn-sec btn-sm', type: 'button', text: 'Recusar', disabled: ocupado, onclick: function () { st.recusando = i.id; renderImportacoes(); } }));
+    }
+    return el('div', { class: 'adm-imp-item', role: 'listitem' },
+      el('div', { class: 'imp-item-topo' }, el('strong', { text: i.empresa }), el('span', { class: 'tag imp-e-pendente', text: qtd(i.linhas, 'linha', 'linhas') })),
+      el('div', { class: 'sub', text: (i.arquivo || 'Planilha sem nome') + ' · enviada em ' + PP.dataHora(i.criado_em) + ' por ' + i.enviado_por + (i.email && i.email !== i.enviado_por ? ' (' + i.email + ')' : '') }),
+      el('div', { class: 'sub', text: 'Declarou origem legítima dos contatos em ' + PP.dataHora(i.declarado_em) + '. A empresa tem ' + qtd(i.contatos_empresa, 'contato', 'contatos') + '.' }),
+      depois > 10000 ? el('div', { class: 'sub adm-falta', text: 'Atenção: pode passar do limite de 10.000 contatos se não houver repetidos.' }) : null,
+      previa(i.previa || []),
+      botoes);
+  }
+  function renderImportacoes() {
+    var sec = $('adm-imp'), lista = $('adm-imp-lista'), imp = st.imp;
+    var pend = imp ? imp.pendentes || [] : [], rec = imp ? imp.recentes || [] : [];
+    sec.hidden = !pend.length && !rec.length;
+    $('adm-imp-titulo').textContent = pend.length ? 'Importações pendentes (' + pend.length + ')' : 'Importações pendentes';
+    lista.replaceChildren();
+    if (!pend.length) lista.append(el('p', { class: 'dica', text: 'Nenhuma importação aguardando.' }));
+    else { lista.setAttribute('role', 'list'); pend.forEach(function (i) { lista.append(cartaoImportacao(i)); }); }
+    $('adm-imp-recentes').hidden = !rec.length;
+    $('adm-imp-recentes-lista').replaceChildren.apply($('adm-imp-recentes-lista'), rec.map(function (i) {
+      var txt = i.estado === 'concluida' ? qtd(i.inseridos, 'entrou', 'entraram') + ', ' + qtd(i.pulados, 'repetido', 'repetidos') : 'Recusada: ' + (i.motivo || '');
+      return el('div', { class: 'imp-item' },
+        el('div', { class: 'imp-item-topo' }, el('strong', { text: i.empresa + ' · ' + (i.arquivo || 'Planilha sem nome') }),
+          el('span', { class: 'tag imp-e-' + i.estado, text: i.estado === 'concluida' ? 'Concluída' : 'Recusada' })),
+        el('div', { class: 'sub', text: PP.dataHora(i.decidido_em) + ' · ' + qtd(i.linhas, 'linha', 'linhas') + ' · ' + txt }));
+    }));
   }
 
   function acoes(e) {

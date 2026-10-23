@@ -128,8 +128,13 @@
             <option value="recentes">Cadastro mais recente</option>
           </select>
         </div>
+        <button class="btn btn-sec" type="button" id="btn-importar" hidden>Importar planilha</button>
         <button class="btn btn-sec" type="button" id="btn-csv" hidden>Baixar planilha (CSV)</button>
       </div>
+      <details class="imp-minhas" id="imp-minhas" hidden>
+        <summary id="imp-minhas-resumo">Minhas importações</summary>
+        <div class="imp-minhas-lista" id="imp-minhas-lista"></div>
+      </details>
       <div class="resumo">
         <span id="contagem">Carregando os contatos…</span>
         <span class="dica" id="dica-proprios" hidden>Você vê só os contatos que você cadastrou ou dos quais é responsável.</span>
@@ -508,6 +513,15 @@
   </form>
 </dialog>
 
+<!-- Importar planilha (código em js/importar.js) -->
+<dialog id="dlg-importar" aria-labelledby="imp-titulo">
+  <div class="dlg-head">
+    <h2 id="imp-titulo">Importar contatos</h2>
+    <button class="fechar" type="button" data-fechar aria-label="Fechar">×</button>
+  </div>
+  <div class="dlg-body" id="imp-corpo"></div>
+</dialog>
+
 <!-- Registrar contato -->
 <dialog id="dlg-log" aria-labelledby="log-titulo">
   <form id="form-log" novalidate>
@@ -573,6 +587,7 @@
 <script src="/js/graficos.js"></script>
 <script src="/vendor/parquet.js"></script>
 <script src="/js/buscar.js"></script>
+<script src="/js/importar.js"></script>
 <script src="/js/app.js"></script>
 </body>
 </html>

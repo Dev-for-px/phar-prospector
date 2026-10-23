@@ -33,9 +33,10 @@
       ['buscar_leads', 'Buscar leads na base da Receita', 'Para adicionar os achados à lista, precisa também de "Cadastrar contatos".'],
       ['editar', 'Editar contatos e registrar conversas'],
       ['excluir', 'Excluir contatos'],
+      ['importar', 'Importar planilha de contatos', 'Cada envio passa pela aprovação da PHAR antes de entrar na lista.'],
       ['exportar', 'Baixar a planilha de contatos (CSV)', 'Só vale se a PHAR liberar a exportação para a empresa.']] }
   ];
-  var PERM_PADRAO = { ver_painel: true, ver_todos: true, ver_equipe: true, ver_empresa: true, criar: true, editar: true, excluir: false, exportar: false, buscar_leads: true };
+  var PERM_PADRAO = { ver_painel: true, ver_todos: true, ver_equipe: true, ver_empresa: true, criar: true, editar: true, excluir: false, exportar: false, buscar_leads: true, importar: false };
 
   var st = {
     items: [], modo: 'carregando', visao: 'painel', filtro: 'todos', q: '', status: '', resp: '', ordem: 'proximo',
@@ -591,6 +592,8 @@
   // ---------- planilha ----------
   // A exportação é travada no banco: só a PHAR libera, por empresa (com ou sem prazo).
   // Os dados vêm da função exportar_contatos, que confere a liberação e a permissão e registra na auditoria.
+  // a importação compara a planilha com os contatos que a pessoa vê, para avisar dos repetidos
+  function ctxImportar() { return { itens: function () { return st.items; }, souDono: podeEditarEmpresa }; }
   function exportacaoLiberada() { return !!(st.empresa && st.empresa.exportacao_liberada); }
   function csv() {
     var cols = [['Empresa', 'empresa'], ['Contato', 'contato'], ['Cargo', 'cargo'], ['Telefone', 'telefone'], ['E-mail', 'email'], ['Cidade', 'cidade'], ['UF', 'uf'],
@@ -674,6 +677,7 @@
     if (v.criar) faz.push('cadastrar');
     if (v.editar) faz.push('editar');
     if (v.excluir) faz.push('excluir');
+    if (v.importar) faz.push('importar planilha');
     if (v.exportar) faz.push('baixar a planilha');
     if (v.buscar_leads) faz.push('buscar leads');
     function lista(a) { return a.length > 1 ? a.slice(0, -1).join(', ') + ' e ' + a[a.length - 1] : a[0]; }
@@ -856,6 +860,7 @@
         var fechadas = lerLocal('kanban-fechadas');
         if (fechadas && typeof fechadas === 'object') st.kbFechadas = fechadas;
         $('btn-novo').hidden = !pode('criar');
+        $('btn-importar').hidden = !(pode('importar') && window.PPImportar);
         $('topo-empresa').textContent = emp.nome;
         $('topo-nome').textContent = u.nome || u.email || '';
         $('link-admin').hidden = !u.is_admin;
@@ -866,6 +871,7 @@
         if (st.visao === 'buscar') abrirBusca();
         tela('app'); preencherEmpresa(); iniciarLista(); carregarEquipe();
         if (pode('ver_empresa')) carregarEmpresa();
+        if (pode('importar') && window.PPImportar) window.PPImportar.minhas(ctxImportar());
       });
     }).catch(function () {
       estado('Não deu para carregar', 'Confira sua conexão e tente de novo.', true);
@@ -916,6 +922,9 @@
   $('ordem').addEventListener('change', function () { st.ordem = this.value; render(); });
   $('btn-limpar').addEventListener('click', limpar);
   $('btn-csv').addEventListener('click', csv);
+  $('btn-importar').addEventListener('click', function () {
+    if (st.modo === 'ok') window.PPImportar.abrir(ctxImportar()); else toast('Aguarde: os contatos ainda estão carregando');
+  });
   $('sel-todos').addEventListener('change', function () {
     var marcar = this.checked;
     document.querySelectorAll('#lista .linha[data-id]').forEach(function (l) {

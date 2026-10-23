@@ -64,6 +64,16 @@
   <main class="wrap sistema">
     <div class="aviso aviso-erro" id="aviso-erro" role="alert" hidden></div>
 
+    <section class="secao-adm adm-imp" id="adm-imp" aria-labelledby="adm-imp-titulo" hidden>
+      <h2 id="adm-imp-titulo">Importações pendentes</h2>
+      <p class="dica">Planilhas que os clientes enviaram. Aprovar grava os contatos na lista da empresa, pulando os repetidos (mesmo CNPJ, telefone ou nome). Envio parado há mais de 30 dias vence sozinho.</p>
+      <div id="adm-imp-lista"></div>
+      <details class="adm-imp-recentes" id="adm-imp-recentes" hidden>
+        <summary>Últimas importações decididas</summary>
+        <div id="adm-imp-recentes-lista"></div>
+      </details>
+    </section>
+
     <section class="secao-adm" aria-label="Visão geral">
       <div class="painel-grade">
         <div class="bloco-graf">

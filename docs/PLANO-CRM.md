@@ -55,24 +55,32 @@ Já existe excluir na ficha (permissão `excluir`). Acrescentar:
 
 Motivo: proteger o servidor (plano gratuito) e a qualidade da base.
 
-- [ ] **C.1 Tela de importação** na aba Contatos (permissão nova `importar`, desmarcada por padrão
+- [x] **C.1 Tela de importação** na aba Contatos (permissão nova `importar`, desmarcada por padrão
   para colaborador; o responsável da empresa tem).
   - Aceita CSV e Excel (.xlsx). Biblioteca servida pelo próprio site (`dist/vendor/` via
     `build.mjs`), por causa da CSP.
   - Passos: escolher arquivo → ligar colunas da planilha aos campos do sistema → prévia das
     10 primeiras linhas → aviso de duplicados (mesmo CNPJ, telefone ou nome) → enviar para aprovação.
-- [ ] **C.2 Fila de aprovação no banco.** Tabela nova (schema `private`) `importacoes`:
+- [x] **C.2 Fila de aprovação no banco.** Tabela nova (schema `private`) `importacoes`:
   empresa, quem enviou, nome do arquivo, quantidade de linhas, estado
   (`pendente`, `aprovada`, `recusada`, `concluida`), motivo da recusa, datas.
   As linhas ficam em tabela de espera `private.importacao_linhas` (jsonb por linha), nunca direto
   em `prospects`. Limite por envio (ex.: 2.000 linhas) e o limite de 10.000 contatos por empresa.
-- [ ] **C.3 Painel admin (só administrador geral):** seção "Importações pendentes" com empresa,
+- [x] **C.3 Painel admin (só administrador geral):** seção "Importações pendentes" com empresa,
   quantidade, prévia e botões Aprovar / Recusar (com motivo). Aprovar grava em `prospects` por uma
   função do banco (`admin_importacao_aprovar`), em lotes, pulando duplicados, e apaga as linhas de espera.
   Registrar em `private.auditoria`.
-- [ ] **C.4 Para o cliente:** na aba Contatos, "Minhas importações" com o estado de cada envio.
-- [ ] **C.5 Limpeza:** linhas de espera de importações recusadas ou com mais de 30 dias somem
+- [x] **C.4 Para o cliente:** na aba Contatos, "Minhas importações" com o estado de cada envio.
+- [x] **C.5 Limpeza:** linhas de espera de importações recusadas ou com mais de 30 dias somem
   (função chamada pelo admin ou rotina diária).
+- Decisões do Pedro (22 out 2026): Excel lido pela SheetJS atual baixada do site oficial
+  (cdn.sheetjs.com, versão 0.20.3 fixa, guardada em `vendor/` e copiada no `build.mjs`), não a do npm.
+  Até 2.000 linhas por envio e até 3 envios pendentes por empresa; nenhuma importação sem aprovação.
+  Na aprovação: origem "Importação", data e planilha nas observações, telefone só com números,
+  e-mail em minúsculas (inválido fica vazio), CNPJ conferido (`PP.docValido` na tela e
+  `private.cnpj_valido` no banco; inválido fica vazio). Antes de enviar, a pessoa marca a declaração
+  "Declaro que estes contatos foram obtidos de forma legítima e que posso usá-los para contato
+  comercial"; o banco guarda quem e quando. A limpeza (C.5) roda ao abrir o `/admin`.
 
 ## Fase D — Exportação travada, só o administrador geral libera
 
@@ -147,6 +155,6 @@ ideia, não copiar o código: o ClientX é entrega de outro cliente, em outro re
 
 1. Valores e nomes dos planos (E.6).
 2. Texto do botão de WhatsApp e mensagem pré-pronta.
-3. Limite de linhas por importação (sugestão: 2.000).
-4. Se o responsável da empresa pode importar sem aprovação depois de um tempo de uso (sugestão: não, por enquanto).
+3. ~~Limite de linhas por importação~~ decidido: 2.000 (22 out 2026).
+4. ~~Importar sem aprovação depois de um tempo de uso~~ decidido: não, por enquanto (22 out 2026).
 5. Quais campos do cliente importam mais para os seus clientes (F.2); a lista acima é o ponto de partida.
