@@ -156,12 +156,24 @@
 
     <!-- Clientes (código em js/clientes.js) -->
     <section id="v-clientes" role="tabpanel" aria-labelledby="aba-clientes" hidden>
+      <div class="troca-visao" role="group" aria-label="Como mostrar os clientes">
+        <button class="troca-btn" type="button" id="cl-modo-lista" aria-pressed="true">Lista</button>
+        <button class="troca-btn" type="button" id="cl-modo-kanban" aria-pressed="false">Kanban</button>
+      </div>
+      <p class="cl-painel-aviso" id="cl-painel-aviso" hidden>Números dos seus clientes</p>
+      <div class="cl-painel" id="cl-painel" hidden>
+        <button class="cl-num" type="button" data-num="ativos" aria-pressed="false"><b id="cl-n-ativos">–</b><span>Clientes ativos</span></button>
+        <button class="cl-num" type="button" data-num="renovam" aria-pressed="false"><b id="cl-n-renovam">–</b><span>Renovações do mês</span></button>
+        <button class="cl-num" type="button" data-num="cancelados" aria-pressed="false"><b id="cl-n-cancelados">–</b><span>Cancelamentos do mês</span></button>
+        <div class="cl-num cl-num-reais" id="cl-receita-caixa" hidden><b id="cl-n-receita">–</b><span>Receita mensal</span><small id="cl-n-receita-sub"></small></div>
+        <div class="cl-num cl-num-reais" id="cl-contratos-caixa" hidden><b id="cl-n-contratos">–</b><span>Contratos ativos (valor único)</span><small id="cl-n-contratos-sub"></small></div>
+      </div>
       <div class="toolbar">
         <div class="campo busca">
           <label for="cl-q">Buscar</label>
           <input type="search" id="cl-q" placeholder="Cliente, pessoa, cidade, o que contratou" autocomplete="off">
         </div>
-        <div class="campo">
+        <div class="campo" id="cl-sit-campo">
           <label for="cl-sit">Situação</label>
           <select id="cl-sit">
             <option value="abertos">Ativos e pausados</option>
@@ -187,6 +199,7 @@
         <span>Cliente</span><span>Renovação e valor</span><span>Situação</span><span>Próxima ação</span><span></span>
       </div>
       <div class="lista" id="cl-lista"></div>
+      <div class="kanban" id="cl-kanban" hidden></div>
     </section>
 
     <!-- Buscar leads (código em js/buscar.js) -->
@@ -640,6 +653,30 @@
         <button class="btn btn-primary" type="submit" id="cl-salvar">Salvar ficha</button>
         <button class="btn btn-sec" type="button" id="cl-abrir-contato">Abrir contato</button>
         <button class="btn btn-sec" type="button" data-fechar>Fechar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- Cancelar cliente pelo Kanban (js/clientes.js) -->
+<dialog id="dlg-cancelar" aria-labelledby="can-titulo">
+  <form id="form-cancelar" novalidate>
+    <div class="dlg-head">
+      <div>
+        <p class="dica">Cancelar cliente</p>
+        <h2 id="can-titulo">—</h2>
+      </div>
+      <button class="fechar" type="button" data-fechar aria-label="Fechar">×</button>
+    </div>
+    <div class="dlg-body">
+      <div class="campo">
+        <label for="can-motivo">Motivo do cancelamento</label>
+        <input type="text" id="can-motivo" maxlength="300" autocomplete="off" placeholder="Ex.: fechou a loja">
+      </div>
+      <p class="erro" id="can-erro" role="alert" hidden></p>
+      <div class="acoes">
+        <button class="btn btn-danger" type="submit" id="can-salvar">Cancelar cliente</button>
+        <button class="btn btn-sec" type="button" data-fechar>Voltar</button>
       </div>
     </div>
   </form>

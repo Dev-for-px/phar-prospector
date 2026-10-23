@@ -28,7 +28,7 @@ var COLUNAS = [
   ['Último contato', 'ultimo_contato'], ['Próximo contato', 'proximo_contato'], ['Observações', 'observacoes'],
   ['Histórico', 'historico'], ['Cadastrado por', 'cadastrado_por'], ['Responsável', 'responsavel'], ['Cliente desde', 'cliente_desde'],
   ['Cliente: situação', 'cliente_situacao'], ['Cliente: o que contratou', 'cliente_contratou'], ['Cliente: início', 'cliente_inicio'],
-  ['Cliente: renovação ou fim', 'cliente_renovacao'], ['Cliente: motivo do cancelamento', 'cliente_motivo_cancelamento'], ['Cliente: valor', 'cliente_valor'],
+  ['Cliente: renovação ou fim', 'cliente_renovacao'], ['Cliente: motivo do cancelamento', 'cliente_motivo_cancelamento'], ['Cliente: cancelado em', 'cliente_cancelado_em'], ['Cliente: valor', 'cliente_valor'],
   ['Cliente: tipo de valor', 'cliente_tipo_valor'], ['Cliente: forma de cobrança', 'cliente_forma_cobranca'], ['Cliente: próxima ação', 'cliente_proxima_acao'],
   ['Cliente: o que fazer', 'cliente_proxima_acao_nota'], ['Cliente: observações', 'cliente_observacoes'], ['Cliente: atendimentos', 'cliente_atendimentos'],
   ['Cadastrado em', 'criado_em'], ['Atualizado em', 'atualizado_em']

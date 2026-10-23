@@ -24,7 +24,7 @@ src/                 código do site (HTML, CSS e JavaScript legíveis)
   js/app.js          o sistema
   js/buscar.js       aba Buscar leads
   js/importar.js     importar planilha (Excel ou CSV) para aprovação
-  js/clientes.js     aba Clientes (ficha de cliente, valores e atendimentos)
+  js/clientes.js     aba Clientes (lista ou Kanban, painel, ficha, valores e atendimentos)
   js/admin.js        painel administrativo
   js/graficos.js     gráficos do painel (rosca e linha), sem biblioteca externa
   js/grade.js        desenho da grade de pontos da marca
@@ -32,7 +32,7 @@ vendor/              leitor de Excel (SheetJS 0.20.3, versão fixa baixada do si
 supabase/migrations/ estrutura do banco em etapas (tabelas, regras e funções)
 supabase/schema-completo.sql  o banco inteiro em um arquivo, gerado com "npm run schema"
 docs/DOCUMENTACAO.md documentação completa e reconstrução do zero
-docs/PLANO-CRM.md    plano para virar CRM (Fases A, B, C, D e parte 1 da F feitas: Kanban, excluir, importar com aprovação, exportação travada, aba Clientes)
+docs/PLANO-CRM.md    plano para virar CRM (Fases A, B, C, D e F feitas: Kanban, excluir, importar com aprovação, exportação travada, aba Clientes; falta E)
 scripts/             utilitários (gerar o schema completo)
 build.mjs            monta a pasta dist/ e minifica o código
 vercel.json          configuração da Vercel (build e cabeçalhos de segurança)

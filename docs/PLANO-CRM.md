@@ -144,15 +144,17 @@ ideia, não copiar o código: o ClientX é entrega de outro cliente, em outro re
   `cancelado`, com motivo do cancelamento), responsável na equipe, observações.
 - [x] **F.3 Acompanhamento:** registro de atendimentos (data, canal, o que foi feito) e
   "próxima ação" com data, igual ao retorno programado dos contatos.
-- [ ] **F.4 Lista e Kanban de clientes**, com colunas por situação, filtros por responsável e por
+- [x] **F.4 Lista e Kanban de clientes**, com colunas por situação, filtros por responsável e por
   renovação nos próximos 30 dias.
-- [ ] **F.5 Painel de clientes:** clientes ativos, receita mensal somada, renovações do mês,
+- [x] **F.5 Painel de clientes:** clientes ativos, receita mensal somada, renovações do mês,
   cancelamentos do mês. Valores só para quem tiver permissão nova `ver_financeiro`.
 - [x] **F.6 Permissões novas** nas caixinhas da Equipe: `ver_clientes`, `editar_clientes`,
   `ver_financeiro`. O responsável da empresa tem todas.
 - Decisões do Pedro (22 out 2026), entrega em duas partes. **F-1 (feita):** banco, permissões, aba
   Clientes em lista (filtros de situação, responsável e renovação em 30 dias), ficha e atendimentos.
-  **F-2 (falta):** Kanban de clientes (F.4) e painel de clientes (F.5). Responsável do cliente = o do
+  **F-2 (feita):** Kanban de clientes (F.4) e painel de clientes (F.5), com a coluna
+  `clientes.cancelado_em` para contar cancelamentos do mês; números calculados na tela com o que a
+  pessoa enxerga, e o aviso "Números dos seus clientes" para quem não tem "ver todos". Responsável do cliente = o do
   contato (um só). Valores em tabela separada (`clientes_financeiro`) para `ver_financeiro` valer no
   banco; valor em `numeric(12,2)`, digitado e mostrado como R$ 1.234,56, marcado como mensal ou do
   contrato inteiro (a receita mensal soma só os mensais). A ficha fica guardada se o contato sair de

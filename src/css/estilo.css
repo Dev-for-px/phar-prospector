@@ -517,3 +517,17 @@ section.suave{background:var(--surface-soft)}
 .cl-atend-topo{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
 .cl-atend-topo h3{font-size:18px;line-height:26px;font-weight:600}
 .aviso-info-simples{background:var(--surface-tint);color:var(--ink);margin-top:0}
+.cl-painel-aviso{font-size:14px;line-height:20px;font-weight:600;color:var(--warning);margin-bottom:8px}
+.cl-painel{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:12px;margin-bottom:20px}
+.cl-num{appearance:none;background:var(--surface-soft);border:1px solid var(--line);border-bottom:3px solid var(--line);border-radius:var(--radius-lg);padding:12px 14px;text-align:left;color:var(--ink);display:flex;flex-direction:column;gap:2px;min-width:0;font:inherit}
+button.cl-num{cursor:pointer}
+button.cl-num:hover{background:var(--surface-tint)}
+button.cl-num[aria-pressed="true"]{background:var(--surface-tint);border-bottom-color:var(--brand)}
+.cl-num b{font-size:26px;line-height:32px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cl-num span{font-size:14px;line-height:20px;color:var(--ink-muted)}
+.cl-num small{font-size:12.5px;line-height:18px;color:var(--ink-subtle)}
+.cl-kb-ativo{border-top-color:var(--success)}
+.cl-kb-pausado{border-top-color:var(--warning)}
+.cl-kb-cancelado{border-top-color:var(--line)}
+.kb-card .cl-venceu,.kb-card .cl-renova{font-size:13px;line-height:18px;font-weight:600}
+@media (max-width:640px){.cl-painel{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.cl-num{padding:10px}.cl-num b{font-size:22px;line-height:28px}.cl-num span{font-size:13px;line-height:18px}.cl-num-reais{grid-column:1/-1}}

@@ -2,13 +2,17 @@
 // valores, atendimentos e próxima ação). A ficha nasce no banco quando o contato fecha (gatilho) e é a mesma
 // pessoa da lista de contatos: nome, telefone e responsável vêm do contato.
 // Valores ficam em clientes_financeiro e só chegam para quem tem ver_financeiro (o banco decide).
+// Duas visões: Lista ou Kanban (colunas por situação). No topo, o painel de clientes (ativos, receita mensal,
+// renovações e cancelamentos do mês), calculado aqui com as fichas que a pessoa enxerga.
 // O app.js chama PPClientes.abrir(ctx) ao entrar na aba e PPClientes.render() a cada desenho.
 window.PPClientes = (function () {
   'use strict';
   var PP = window.PP, $ = PP.$, el = PP.el, sb = PP.sb, toast = PP.toast;
   var SITUACOES = [['ativo', 'Ativo'], ['pausado', 'Pausado'], ['cancelado', 'Cancelado']];
   var TAM = 1000;
-  var cs = { fichas: [], fin: {}, modo: 'carregando', q: '', sit: 'abertos', resp: '', renova: false, editId: null, atendId: null };
+  var cs = { fichas: [], fin: {}, modo: 'carregando', q: '', sit: 'abertos', resp: '', renova: false, num: '', editId: null, atendId: null,
+    visao: 'lista', kbLimite: {}, kbFechadas: { cancelado: true }, arrastando: '', cancelarId: null };
+  var POR_COLUNA = 50;
   var ctx = null, ligado = false;
   var reais = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
   var colator = new Intl.Collator('pt-BR', { sensitivity: 'base' });
@@ -35,6 +39,11 @@ window.PPClientes = (function () {
   }
   function podeEditar() { return ctx.pode('editar_clientes'); }
   function podeFin() { return ctx.pode('ver_financeiro'); }
+  // preferências da tela, só neste navegador e por usuário
+  function chaveLocal(k) { return 'pp-clientes-' + k + ':' + (ctx && ctx.usuario() ? ctx.usuario().id : ''); }
+  function lerLocal(k) { try { return JSON.parse(localStorage.getItem(chaveLocal(k))); } catch (e) { return null; } }
+  function gravarLocal(k, v) { try { localStorage.setItem(chaveLocal(k), JSON.stringify(v)); } catch (e) { /* navegador sem armazenamento */ } }
+  function mesAtual() { return PP.hoje().slice(0, 7); }
   function ficha(id) { for (var i = 0; i < cs.fichas.length; i++) if (cs.fichas[i].id === id) return cs.fichas[i]; return null; }
 
   // ---------- banco ----------
@@ -70,8 +79,14 @@ window.PPClientes = (function () {
     var q = semAcento(cs.q.trim()), eu = ctx.usuario().id;
     return todos.filter(function (x) {
       var c = x.c, p = x.p;
-      if (cs.sit === 'abertos' && c.situacao === 'cancelado') return false;
-      if (cs.sit !== 'abertos' && cs.sit !== 'todos' && c.situacao !== cs.sit) return false;
+      if (cs.num === 'ativos' && c.situacao !== 'ativo') return false;
+      if (cs.num === 'renovam' && !(c.situacao !== 'cancelado' && String(c.renovacao || '').slice(0, 7) === mesAtual())) return false;
+      if (cs.num === 'cancelados' && !(c.situacao === 'cancelado' && String(c.cancelado_em || '').slice(0, 7) === mesAtual())) return false;
+      // no Kanban as colunas já separam a situação; na lista vale o filtro (o número clicado tem prioridade)
+      if (!cs.num && cs.visao === 'lista') {
+        if (cs.sit === 'abertos' && c.situacao === 'cancelado') return false;
+        if (cs.sit !== 'abertos' && cs.sit !== 'todos' && c.situacao !== cs.sit) return false;
+      }
       if (cs.resp && p.responsavel !== (cs.resp === 'eu' ? eu : cs.resp)) return false;
       if (cs.renova) { var d = diasAte(c.renovacao); if (d == null || d > 30 || c.situacao === 'cancelado') return false; }
       if (q && semAcento([p.empresa, p.contato, p.cidade, p.telefone, c.contratou, c.observacoes].join(' ')).indexOf(q) === -1) return false;
@@ -124,7 +139,7 @@ window.PPClientes = (function () {
     return el('div', { class: 'vazio' }, el('h2', { text: titulo }), el('p', { text: texto }),
       botao ? el('button', { class: 'btn btn-primary', type: 'button', text: botao, onclick: acao }) : null);
   }
-  function limpar() { cs.q = ''; cs.sit = 'abertos'; cs.resp = ''; cs.renova = false; $('cl-q').value = ''; $('cl-sit').value = 'abertos'; $('cl-resp').value = ''; $('cl-renova').checked = false; render(); }
+  function limpar() { cs.q = ''; cs.sit = 'abertos'; cs.resp = ''; cs.renova = false; cs.num = ''; $('cl-q').value = ''; $('cl-sit').value = 'abertos'; $('cl-resp').value = ''; $('cl-renova').checked = false; render(); }
   function preencherResp() {
     var sel = $('cl-resp'), membros = ctx.membros(), eu = ctx.usuario().id;
     while (sel.options.length > 2) sel.remove(2);
@@ -133,15 +148,126 @@ window.PPClientes = (function () {
     if (sel.value !== cs.resp) { cs.resp = ''; sel.value = ''; }
   }
 
+  // ---------- painel de clientes ----------
+  function renderPainel(todos) {
+    var mes = mesAtual(), ativos = 0, renovam = 0, cancelados = 0, receita = 0, comMensal = 0, contratos = 0, nContratos = 0;
+    todos.forEach(function (x) {
+      var c = x.c, f = cs.fin[c.id];
+      if (c.situacao === 'ativo') {
+        ativos++;
+        if (f && f.valor != null) {
+          if (f.tipo_valor === 'contrato') { contratos += Number(f.valor); nContratos++; }
+          else { receita += Number(f.valor); comMensal++; }
+        }
+      }
+      if (c.situacao !== 'cancelado' && String(c.renovacao || '').slice(0, 7) === mes) renovam++;
+      if (c.situacao === 'cancelado' && String(c.cancelado_em || '').slice(0, 7) === mes) cancelados++;
+    });
+    $('cl-painel').hidden = false;
+    $('cl-painel-aviso').hidden = ctx.pode('ver_todos');
+    $('cl-n-ativos').textContent = ativos;
+    $('cl-n-renovam').textContent = renovam;
+    $('cl-n-cancelados').textContent = cancelados;
+    $('cl-receita-caixa').hidden = !podeFin();
+    $('cl-contratos-caixa').hidden = !podeFin();
+    $('cl-n-receita').textContent = fmtReais(receita);
+    $('cl-n-receita-sub').textContent = comMensal === 1 ? '1 cliente ativo com valor por mês' : comMensal + ' clientes ativos com valor por mês';
+    $('cl-n-contratos').textContent = fmtReais(contratos);
+    $('cl-n-contratos-sub').textContent = nContratos === 1 ? '1 cliente ativo com valor do contrato' : nContratos + ' clientes ativos com valor do contrato';
+    document.querySelectorAll('#cl-painel [data-num]').forEach(function (b) { b.setAttribute('aria-pressed', String(cs.num === b.dataset.num)); });
+  }
+
+  // ---------- kanban ----------
+  function cartao(x, arrasta) {
+    var c = x.c, p = x.p, f = cs.fin[c.id], resp = ctx.nomes()[p.responsavel], d = diasAte(c.renovacao), alerta = null;
+    if (d != null && c.situacao !== 'cancelado' && d <= 30) {
+      alerta = el('div', { class: d < 0 ? 'cl-venceu' : 'cl-renova', text: d < 0 ? (d === -1 ? 'Venceu ontem' : 'Venceu há ' + (-d) + ' dias') : d === 0 ? 'Renova hoje' : d === 1 ? 'Renova amanhã' : 'Renova em ' + d + ' dias' });
+    }
+    var menu = arrasta ? el('select', { class: 'kb-mover', 'aria-label': 'Mover ' + nomeDe(p) + ' para outra situação', onchange: function () { moverPara(c.id, this.value); } },
+      el('option', { value: '', text: 'Mover para…' }),
+      SITUACOES.filter(function (s) { return s[0] !== c.situacao; }).map(function (s) { return el('option', { value: s[0], text: s[1] }); })) : null;
+    return el('div', { class: 'kb-card', role: 'listitem', draggable: arrasta ? 'true' : null, 'data-id': c.id },
+      el('button', { class: 'nome', type: 'button', text: nomeDe(p), onclick: function () { abrirFicha(c.id); } }),
+      c.contratou ? el('div', { class: 'sub', text: c.contratou }) : null,
+      alerta,
+      podeFin() && valorTexto(f) ? el('div', { class: 'sub cl-valor', text: valorTexto(f) }) : null,
+      c.situacao === 'cancelado'
+        ? (c.motivo_cancelamento ? el('div', { class: 'sub', text: 'Motivo: ' + c.motivo_cancelamento }) : null)
+        : (PP.parse(c.proxima_acao) ? celProxima(c) : null),
+      resp ? el('div', { class: 'kb-quem', text: resp }) : null,
+      menu);
+  }
+  function renderKanban(vis) {
+    var quadro = $('cl-kanban'), grupos = {}, arrasta = podeEditar();
+    SITUACOES.forEach(function (s) { grupos[s[0]] = []; });
+    vis.forEach(function (x) { (grupos[x.c.situacao] || grupos.ativo).push(x); });
+    SITUACOES.forEach(function (s) {
+      var id = s[0], itens = grupos[id], fechada = !!cs.kbFechadas[id], lim = cs.kbLimite[id] || POR_COLUNA, corpo = null, mais = null;
+      var cab = el('button', { class: 'kb-cab', type: 'button', 'aria-expanded': String(!fechada),
+        onclick: function () { cs.kbFechadas[id] = !fechada; gravarLocal('fechadas', cs.kbFechadas); render(); } },
+        el('span', { class: 'kb-titulo', text: s[1] }),
+        el('span', { class: 'kb-n', text: String(itens.length) }),
+        el('span', { class: 'kb-seta', 'aria-hidden': 'true', text: fechada ? '+' : '−' }));
+      if (!fechada) {
+        corpo = itens.length
+          ? el('div', { class: 'kb-corpo', role: 'list', 'aria-label': s[1] }, itens.slice(0, lim).map(function (x) { return cartao(x, arrasta); }))
+          : el('p', { class: 'kb-vazio', text: arrasta ? 'Nenhum cliente. Arraste um cartão para cá.' : 'Nenhum cliente.' });
+        if (itens.length > lim) mais = el('button', { class: 'linkbtn kb-mais', type: 'button', text: 'Ver mais (faltam ' + (itens.length - lim) + ')',
+          onclick: function () { cs.kbLimite[id] = lim + POR_COLUNA; render(); } });
+      }
+      quadro.append(el('section', { class: 'kb-col cl-kb-' + id + (fechada ? ' kb-fechada' : ''), 'data-status': id, 'aria-label': s[1] + ': ' + itens.length }, cab, corpo, mais));
+    });
+  }
+  // mudar a situação pelo Kanban; cancelar pede o motivo (o banco exige)
+  function moverPara(id, sit) {
+    var c = ficha(id);
+    if (!c || !sit || c.situacao === sit || !podeEditar()) { render(); return; }
+    if (sit === 'cancelado') { abrirCancelar(id); render(); return; }
+    gravarSituacao(c, { situacao: sit, motivo_cancelamento: '' });
+  }
+  function gravarSituacao(c, dados) {
+    var antes = { situacao: c.situacao, motivo_cancelamento: c.motivo_cancelamento, cancelado_em: c.cancelado_em };
+    Object.assign(c, dados); render();
+    return sb.from('clientes').update(dados).eq('id', c.id).select().single().then(function (r) {
+      Object.assign(c, checar(r)); render(); toast('Movido para ' + nomeSit(c.situacao));
+    }).catch(function (e) { Object.assign(c, antes); render(); toast(ctx.msgErro(e)); throw e; });
+  }
+  function abrirCancelar(id) {
+    var c = ficha(id), p = c && ctx.achar(c.prospect_id);
+    if (!c || !p) return;
+    cs.cancelarId = id;
+    $('can-titulo').textContent = nomeDe(p);
+    $('can-motivo').value = '';
+    $('can-erro').hidden = true;
+    $('dlg-cancelar').showModal();
+    $('can-motivo').focus();
+  }
+  function confirmarCancelar(ev) {
+    ev.preventDefault();
+    var c = ficha(cs.cancelarId), motivo = $('can-motivo').value.trim(), err = $('can-erro'), btn = $('can-salvar');
+    if (!c) return;
+    if (!motivo) { err.textContent = 'Escreva o motivo do cancelamento.'; err.hidden = false; $('can-motivo').focus(); return; }
+    btn.disabled = true;
+    gravarSituacao(c, { situacao: 'cancelado', motivo_cancelamento: motivo }).then(function () { $('dlg-cancelar').close(); })
+      .catch(function (e) { err.textContent = ctx.msgErro(e); err.hidden = false; })
+      .then(function () { btn.disabled = false; });
+  }
+  function trocarVisao(v) { cs.visao = v; gravarLocal('visao', v); render(); }
+
   function render() {
     if (!ctx) return;
     preencherResp();
-    var lista = $('cl-lista');
+    var lista = $('cl-lista'), quadro = $('cl-kanban'), kb = cs.visao === 'kanban';
     lista.replaceChildren(); lista.removeAttribute('role');
+    quadro.replaceChildren(); quadro.hidden = true;
+    $('cl-modo-lista').setAttribute('aria-pressed', String(!kb));
+    $('cl-modo-kanban').setAttribute('aria-pressed', String(kb));
+    $('cl-sit-campo').hidden = kb;
+    $('cl-painel').hidden = true; $('cl-painel-aviso').hidden = true;
     $('cl-csv').hidden = !(cs.modo === 'ok' && ctx.pode('exportar') && ctx.exportacaoLiberada() && comContato().length);
     $('cl-limpar').hidden = true;
     $('cl-dica').hidden = ctx.pode('ver_todos');
-    $('cl-head').hidden = false;
+    $('cl-head').hidden = kb;
     if (cs.modo === 'carregando' || !ctx.pronto()) { $('cl-contagem').textContent = 'Carregando os clientes…'; return; }
     if (cs.modo === 'erro') {
       $('cl-contagem').textContent = '';
@@ -155,10 +281,12 @@ window.PPClientes = (function () {
       lista.append(vazio('Nenhum cliente ainda', 'Quando um contato for para "Fechado", ele aparece aqui com a ficha de cliente: o que contratou, renovação, atendimentos e próxima ação.', '', null));
       return;
     }
-    var vis = visiveis(todos), filtrando = cs.q.trim() || cs.sit !== 'abertos' || cs.resp || cs.renova;
+    renderPainel(todos);
+    var vis = visiveis(todos), filtrando = cs.q.trim() || (!kb && cs.sit !== 'abertos') || cs.resp || cs.renova || cs.num;
     $('cl-contagem').textContent = (filtrando ? 'Mostrando ' + vis.length + ' de ' + todos.length : String(todos.length)) + (todos.length === 1 ? ' cliente' : ' clientes');
     $('cl-limpar').hidden = !filtrando;
     if (!vis.length) { $('cl-head').hidden = true; lista.append(vazio('Nenhum cliente neste filtro', 'Mude a busca ou limpe os filtros.', 'Limpar filtros', limpar)); return; }
+    if (kb) { $('cl-head').hidden = true; quadro.hidden = false; renderKanban(vis); return; }
     lista.setAttribute('role', 'list');
     vis.forEach(function (x) { lista.append(linha(x)); });
   }
@@ -279,7 +407,7 @@ window.PPClientes = (function () {
   function csv() {
     var cols = [['Empresa', 'empresa'], ['Pessoa de contato', 'contato'], ['Telefone', 'telefone'], ['E-mail', 'email'], ['Cidade', 'cidade'], ['UF', 'uf'],
       ['CNPJ', 'cnpj'], ['Responsável', 'responsavel'], ['Cliente desde', 'cliente_desde'], ['O que contratou', 'contratou'], ['Situação', 'situacao'],
-      ['Motivo do cancelamento', 'motivo_cancelamento'], ['Início', 'inicio'], ['Renovação ou fim', 'renovacao'], ['Valor', 'valor'], ['Tipo de valor', 'tipo_valor'],
+      ['Motivo do cancelamento', 'motivo_cancelamento'], ['Cancelado em', 'cancelado_em'], ['Início', 'inicio'], ['Renovação ou fim', 'renovacao'], ['Valor', 'valor'], ['Tipo de valor', 'tipo_valor'],
       ['Forma de cobrança', 'forma_cobranca'], ['Próxima ação', 'proxima_acao'], ['O que fazer', 'proxima_acao_nota'], ['Observações', 'observacoes'], ['Atendimentos', 'atendimentos']];
     function cel(v) {
       v = String(v == null ? '' : v);
@@ -329,10 +457,40 @@ window.PPClientes = (function () {
       $('dlg-cliente').close(); ctx.abrirContato(c.prospect_id);
     });
     $('form-atend').addEventListener('submit', salvarAtendimento);
+    $('form-cancelar').addEventListener('submit', confirmarCancelar);
+    $('cl-modo-lista').addEventListener('click', function () { trocarVisao('lista'); });
+    $('cl-modo-kanban').addEventListener('click', function () { trocarVisao('kanban'); });
+    document.querySelectorAll('#cl-painel [data-num]').forEach(function (b) {
+      b.addEventListener('click', function () { cs.num = cs.num === b.dataset.num ? '' : b.dataset.num; render(); });
+    });
+    // arrastar e soltar no Kanban (computador); no celular, o menu "Mover para…" do cartão
+    var quadro = $('cl-kanban');
+    function limparArraste() { quadro.querySelectorAll('.kb-arrastando,.kb-alvo').forEach(function (n) { n.classList.remove('kb-arrastando', 'kb-alvo'); }); }
+    quadro.addEventListener('dragstart', function (ev) {
+      var c = ev.target.closest && ev.target.closest('.kb-card[draggable]'); if (!c) return;
+      cs.arrastando = c.dataset.id; ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', c.dataset.id);
+      c.classList.add('kb-arrastando');
+    });
+    quadro.addEventListener('dragend', function () { cs.arrastando = ''; limparArraste(); });
+    quadro.addEventListener('dragover', function (ev) {
+      var col = cs.arrastando && ev.target.closest && ev.target.closest('.kb-col'); if (!col) return;
+      ev.preventDefault(); ev.dataTransfer.dropEffect = 'move';
+      if (!col.classList.contains('kb-alvo')) { limparArraste(); quadro.querySelector('[data-id="' + cs.arrastando + '"]').classList.add('kb-arrastando'); col.classList.add('kb-alvo'); }
+    });
+    quadro.addEventListener('drop', function (ev) {
+      var col = cs.arrastando && ev.target.closest && ev.target.closest('.kb-col'); if (!col) return;
+      ev.preventDefault();
+      var id = cs.arrastando; cs.arrastando = ''; limparArraste(); moverPara(id, col.dataset.status);
+    });
   }
 
   function abrir(c) {
+    var primeira = !ctx;
     ctx = c; ligar(); preencherResp();
+    if (primeira) {
+      cs.visao = lerLocal('visao') === 'kanban' ? 'kanban' : 'lista';
+      var f = lerLocal('fechadas'); if (f && typeof f === 'object') cs.kbFechadas = f;
+    }
     return carregar();
   }
   // a exclusão de contatos pergunta se há ficha de cliente guardada
