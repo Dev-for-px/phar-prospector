@@ -135,21 +135,31 @@ Estrutura da nova página `/` (`src/index.html`):
 Ideia inspirada no ClientX (sistema de gestão de clientes que o Pedro fez para um cliente). Pegar a
 ideia, não copiar o código: o ClientX é entrega de outro cliente, em outro repositório.
 
-- [ ] **F.1 Virar cliente.** Quando um contato vai para "Fechado", ele aparece na aba nova **Clientes**
+- [x] **F.1 Virar cliente.** Quando um contato vai para "Fechado", ele aparece na aba nova **Clientes**
   (o contato continua sendo o mesmo registro, com o histórico de prospecção junto).
   Coluna `prospects.cliente_desde date` preenchida pelo banco (gatilho) ao virar "Fechado".
-- [ ] **F.2 Dados do cliente** (tabela nova `clientes`, ligada ao contato e à empresa, com RLS igual
+- [x] **F.2 Dados do cliente** (tabela nova `clientes`, ligada ao contato e à empresa, com RLS igual
   à de `prospects`): o que contratou (produto ou serviço, texto), valor mensal ou do contrato,
   forma de cobrança, data de início, data de renovação ou fim, situação (`ativo`, `pausado`,
   `cancelado`, com motivo do cancelamento), responsável na equipe, observações.
-- [ ] **F.3 Acompanhamento:** registro de atendimentos (data, canal, o que foi feito) e
+- [x] **F.3 Acompanhamento:** registro de atendimentos (data, canal, o que foi feito) e
   "próxima ação" com data, igual ao retorno programado dos contatos.
 - [ ] **F.4 Lista e Kanban de clientes**, com colunas por situação, filtros por responsável e por
   renovação nos próximos 30 dias.
 - [ ] **F.5 Painel de clientes:** clientes ativos, receita mensal somada, renovações do mês,
   cancelamentos do mês. Valores só para quem tiver permissão nova `ver_financeiro`.
-- [ ] **F.6 Permissões novas** nas caixinhas da Equipe: `ver_clientes`, `editar_clientes`,
+- [x] **F.6 Permissões novas** nas caixinhas da Equipe: `ver_clientes`, `editar_clientes`,
   `ver_financeiro`. O responsável da empresa tem todas.
+- Decisões do Pedro (22 out 2026), entrega em duas partes. **F-1 (feita):** banco, permissões, aba
+  Clientes em lista (filtros de situação, responsável e renovação em 30 dias), ficha e atendimentos.
+  **F-2 (falta):** Kanban de clientes (F.4) e painel de clientes (F.5). Responsável do cliente = o do
+  contato (um só). Valores em tabela separada (`clientes_financeiro`) para `ver_financeiro` valer no
+  banco; valor em `numeric(12,2)`, digitado e mostrado como R$ 1.234,56, marcado como mensal ou do
+  contrato inteiro (a receita mensal soma só os mensais). A ficha fica guardada se o contato sair de
+  "Fechado". Excluir o contato apaga ficha, valores e atendimentos, com o aviso "Este contato é
+  cliente; a ficha de cliente também será excluída." Backup geral leva os dados de cliente. A planilha
+  de clientes segue a trava de exportação da Fase D. Permissões começam: `ver_clientes` marcada,
+  `editar_clientes` e `ver_financeiro` desmarcadas.
 
 ## Decisões pendentes do Pedro
 

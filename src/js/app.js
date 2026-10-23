@@ -18,7 +18,7 @@
   ];
   var UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
   var CAMPOS_TEXTO = ['empresa', 'contato', 'cargo', 'telefone', 'email', 'cidade', 'uf', 'segmento', 'porte', 'origem', 'link', 'interesse'];
-  var VISOES = ['painel', 'contatos', 'buscar', 'equipe', 'empresa'];
+  var VISOES = ['painel', 'contatos', 'clientes', 'buscar', 'equipe', 'empresa'];
   var CAMPOS_EMP = ['nome', 'razao_social', 'documento', 'segmento', 'telefone', 'email', 'site', 'instagram', 'descricao', 'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf'];
 
   // permissões que o responsável marca para cada colaborador (as mesmas chaves do banco)
@@ -34,9 +34,13 @@
       ['editar', 'Editar contatos e registrar conversas'],
       ['excluir', 'Excluir contatos'],
       ['importar', 'Importar planilha de contatos', 'Cada envio passa pela aprovação da PHAR antes de entrar na lista.'],
-      ['exportar', 'Baixar a planilha de contatos (CSV)', 'Só vale se a PHAR liberar a exportação para a empresa.']] }
+      ['exportar', 'Baixar a planilha de contatos e de clientes (CSV)', 'Só vale se a PHAR liberar a exportação para a empresa.']] },
+    { grupo: 'Clientes', itens: [
+      ['ver_clientes', 'Ver a aba Clientes', 'Mostra os clientes que a pessoa enxerga na lista de contatos.'],
+      ['editar_clientes', 'Editar fichas de clientes e registrar atendimentos', 'Precisa também de "Ver a aba Clientes".'],
+      ['ver_financeiro', 'Ver os valores dos clientes', 'Valor e forma de cobrança. Para mudar os valores, precisa também de "Editar fichas de clientes".']] }
   ];
-  var PERM_PADRAO = { ver_painel: true, ver_todos: true, ver_equipe: true, ver_empresa: true, criar: true, editar: true, excluir: false, exportar: false, buscar_leads: true, importar: false };
+  var PERM_PADRAO = { ver_painel: true, ver_todos: true, ver_equipe: true, ver_empresa: true, criar: true, editar: true, excluir: false, exportar: false, buscar_leads: true, importar: false, ver_clientes: true, editar_clientes: false, ver_financeiro: false };
 
   var st = {
     items: [], modo: 'carregando', visao: 'painel', filtro: 'todos', q: '', status: '', resp: '', ordem: 'proximo',
@@ -263,9 +267,11 @@
     todos.checked = n > 0 && n === total; todos.indeterminate = n > 0 && n < total;
     document.querySelectorAll('#lista .linha[data-id]').forEach(function (l) { l.classList.toggle('marcada', !!st.sel[l.dataset.id]); });
   }
+  // cliente = contato em "Fechado" ou com ficha de cliente guardada (a ficha some junto com o contato)
+  function ehCliente(id) { var p = achar(id); return !!p && (p.status === 'cliente' || (!!window.PPClientes && window.PPClientes.temFicha(id))); }
   function idsExclusao() {
     var ids = st.excIds, r = document.querySelector('input[name="exc-qual"]:checked');
-    if (ids.length > 1 && r && r.value === 'nao-clientes') ids = ids.filter(function (id) { var p = achar(id); return !p || p.status !== 'cliente'; });
+    if (ids.length > 1 && r && r.value === 'nao-clientes') ids = ids.filter(function (id) { return !ehCliente(id); });
     return ids;
   }
   function resumoExclusao() {
@@ -277,12 +283,12 @@
   function abrirExclusao(ids) {
     ids = ids.filter(function (id) { return !!achar(id); });
     if (!ids.length || !pode('excluir')) return;
-    var clientes = ids.filter(function (id) { return achar(id).status === 'cliente'; }).length, outros = ids.length - clientes;
+    var clientes = ids.filter(function (id) { return ehCliente(id); }).length, outros = ids.length - clientes;
     st.excIds = ids;
     $('exc-titulo').textContent = ids.length === 1 ? 'Excluir ' + nomeDe(achar(ids[0])) + '?' : 'Excluir ' + ids.length + ' contatos?';
     $('exc-cliente-um').hidden = !(ids.length === 1 && clientes);
     $('exc-clientes').hidden = !(ids.length > 1 && clientes);
-    $('exc-clientes-txt').textContent = clientes === 1 ? 'Inclui 1 cliente fechado.' : 'Inclui ' + clientes + ' clientes fechados.';
+    $('exc-clientes-txt').textContent = (clientes === 1 ? 'Inclui 1 cliente.' : 'Inclui ' + clientes + ' clientes.') + ' Se forem excluídos, a ficha de cliente também será excluída.';
     $('exc-so-nao-txt').textContent = outros ? 'Excluir só os ' + outros + ' que não são clientes' : 'Não excluir nenhum (todos são clientes)';
     $('exc-todos-txt').textContent = 'Excluir todos os ' + ids.length + ', inclusive os clientes';
     $('exc-so-nao').checked = true;
@@ -294,6 +300,7 @@
   function tirarDaLista(ids) {
     var fora = {}; ids.forEach(function (id) { fora[id] = true; delete st.sel[id]; });
     st.items = st.items.filter(function (p) { return !fora[p.id]; });
+    if (window.PPClientes) window.PPClientes.esquecer(ids);
   }
   function confirmarExclusao(ev) {
     ev.preventDefault();
@@ -380,6 +387,7 @@
     if (st.visao === 'equipe') { renderEquipe(); return; }
     if (st.visao === 'empresa') return;
     if (st.visao === 'buscar') return;
+    if (st.visao === 'clientes') { window.PPClientes.render(); return; }
 
     var kb = st.modoContatos === 'kanban', quadro = $('kanban');
     $('modo-lista').setAttribute('aria-pressed', String(!kb));
@@ -430,7 +438,7 @@
     sel.value = st.resp;
   }
   function visaoLiberada(v) {
-    return v === 'contatos' || (v === 'painel' && pode('ver_painel')) || (v === 'buscar' && pode('buscar_leads') && !!window.PPBuscar && (!!PP.cfg.receita || !!(st.usuario && st.usuario.is_admin))) || (v === 'equipe' && pode('ver_equipe')) || (v === 'empresa' && pode('ver_empresa'));
+    return v === 'contatos' || (v === 'painel' && pode('ver_painel')) || (v === 'clientes' && pode('ver_clientes') && !!window.PPClientes) || (v === 'buscar' && pode('buscar_leads') && !!window.PPBuscar && (!!PP.cfg.receita || !!(st.usuario && st.usuario.is_admin))) || (v === 'equipe' && pode('ver_equipe')) || (v === 'empresa' && pode('ver_empresa'));
   }
   function visaoInicial(v) { return VISOES.indexOf(v) !== -1 && visaoLiberada(v) ? v : (pode('ver_painel') ? 'painel' : 'contatos'); }
   function irVisao(v) {
@@ -438,7 +446,18 @@
     try { history.replaceState(null, '', st.visao === 'painel' ? window.location.pathname : '#' + st.visao); } catch (e) { /* sem histórico */ }
     if (st.visao === 'equipe' && !st.equipe) carregarEquipe();
     if (st.visao === 'buscar') abrirBusca();
+    if (st.visao === 'clientes') abrirClientes();
     render();
+  }
+
+  // ---------- clientes (código em clientes.js) ----------
+  function abrirClientes() {
+    window.PPClientes.abrir({
+      achar: achar, pode: pode, msgErro: msgErro, abrirContato: abrirFicha, exportacaoLiberada: exportacaoLiberada,
+      exportacaoBloqueada: function () { if (st.empresa) st.empresa.exportacao_liberada = false; },
+      nomes: function () { return st.nomes; }, usuario: function () { return st.usuario; },
+      membros: function () { return (st.equipe && st.equipe.membros) || []; }, pronto: function () { return st.modo === 'ok'; }
+    });
   }
 
   // ---------- buscar leads (código em buscar.js) ----------
@@ -531,7 +550,7 @@
     var b = $('ficha-excluir-sim'); b.disabled = true;
     sb.from('prospects').delete().eq('id', id).then(function (r) {
       checar(r);
-      st.items = st.items.filter(function (p) { return p.id !== id; });
+      tirarDaLista([id]);
       render(); $('dlg-ficha').close(); toast('Contato excluído');
     }).catch(function (e) { var err = $('ficha-erro'); err.textContent = msgErro(e); err.hidden = false; })
       .then(function () { b.disabled = false; });
@@ -647,7 +666,7 @@
       st.equipe.membros.forEach(function (m) { st.nomes[m.id] = m.nome || m.email; });
       preencherFiltroResp();
       if (st.visao === 'equipe') renderEquipe();
-      else if (st.visao === 'contatos') render();
+      else if (st.visao === 'contatos' || st.visao === 'clientes') render();
     }).catch(function () { st.equipe = st.equipe || { membros: [], convites: [], pode_gerenciar: false, erro: true }; if (st.visao === 'equipe') renderEquipe(); });
   }
   // caixinhas de permissão: devolve o bloco pronto; ler com lerPermissoes(bloco)
@@ -677,6 +696,8 @@
     if (v.criar) faz.push('cadastrar');
     if (v.editar) faz.push('editar');
     if (v.excluir) faz.push('excluir');
+    if (v.ver_clientes) ve.push(v.ver_financeiro ? 'os clientes, com valores' : 'os clientes');
+    if (v.editar_clientes) faz.push('editar clientes');
     if (v.importar) faz.push('importar planilha');
     if (v.exportar) faz.push('baixar a planilha');
     if (v.buscar_leads) faz.push('buscar leads');
@@ -869,6 +890,7 @@
         var inicial = (window.location.hash || '').replace('#', '');
         st.visao = visaoInicial(inicial);
         if (st.visao === 'buscar') abrirBusca();
+        if (st.visao === 'clientes') abrirClientes();
         tela('app'); preencherEmpresa(); iniciarLista(); carregarEquipe();
         if (pode('ver_empresa')) carregarEmpresa();
         if (pode('importar') && window.PPImportar) window.PPImportar.minhas(ctxImportar());
@@ -958,7 +980,9 @@
     resumoFicha();
   });
   $('ficha-registrar').addEventListener('click', function () { var id = st.editId; $('dlg-ficha').close(); abrirLog(id); });
-  $('ficha-excluir').addEventListener('click', function () { $('ficha-excluir').hidden = true; $('ficha-confirma').hidden = false; $('ficha-excluir-nao').focus(); });
+  $('ficha-excluir').addEventListener('click', function () {
+    $('ficha-excluir-txt').textContent = st.editId && ehCliente(st.editId) ? 'Este contato é cliente; a ficha de cliente também será excluída. Excluir de vez?' : 'Excluir de vez?';
+    $('ficha-excluir').hidden = true; $('ficha-confirma').hidden = false; $('ficha-excluir-nao').focus(); });
   $('ficha-excluir-nao').addEventListener('click', function () { $('ficha-confirma').hidden = true; $('ficha-excluir').hidden = false; });
   $('ficha-excluir-sim').addEventListener('click', excluir);
 

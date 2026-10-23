@@ -10,7 +10,7 @@ Controle de prospecção com retorno programado: cada contato abordado, o status
 |---|---|---|
 | `/` | `src/index.html` | Todo mundo. Apresenta o sistema, com os botões Entrar e Criar conta. |
 | `/entrar` | `src/entrar.html` | Todo mundo. Login, cadastro e recuperação de senha. |
-| `/app` | `src/app.html` | Só quem tem login em uma empresa ativa. É o sistema: Painel, Contatos (em lista ou Kanban), Buscar leads, Equipe e Empresa. |
+| `/app` | `src/app.html` | Só quem tem login em uma empresa ativa. É o sistema: Painel, Contatos (em lista ou Kanban), Clientes, Buscar leads, Equipe e Empresa. |
 | `/admin` | `src/admin.html` | Só o administrador. Lista as empresas, libera, bloqueia, simula acesso, aprova ou recusa importações de planilha e baixa o backup. |
 
 ## Como está organizado
@@ -24,6 +24,7 @@ src/                 código do site (HTML, CSS e JavaScript legíveis)
   js/app.js          o sistema
   js/buscar.js       aba Buscar leads
   js/importar.js     importar planilha (Excel ou CSV) para aprovação
+  js/clientes.js     aba Clientes (ficha de cliente, valores e atendimentos)
   js/admin.js        painel administrativo
   js/graficos.js     gráficos do painel (rosca e linha), sem biblioteca externa
   js/grade.js        desenho da grade de pontos da marca
@@ -31,7 +32,7 @@ vendor/              leitor de Excel (SheetJS 0.20.3, versão fixa baixada do si
 supabase/migrations/ estrutura do banco em etapas (tabelas, regras e funções)
 supabase/schema-completo.sql  o banco inteiro em um arquivo, gerado com "npm run schema"
 docs/DOCUMENTACAO.md documentação completa e reconstrução do zero
-docs/PLANO-CRM.md    plano para virar CRM (Fases A, B, C e D feitas: Kanban, excluir, importar com aprovação, exportação travada)
+docs/PLANO-CRM.md    plano para virar CRM (Fases A, B, C, D e parte 1 da F feitas: Kanban, excluir, importar com aprovação, exportação travada, aba Clientes)
 scripts/             utilitários (gerar o schema completo)
 build.mjs            monta a pasta dist/ e minifica o código
 vercel.json          configuração da Vercel (build e cabeçalhos de segurança)
@@ -50,7 +51,7 @@ backup/              script de backup para o Google Planilhas
 - Cada empresa cliente é um "projeto": todos os usuários dela veem e editam a mesma lista de contatos.
 - Quem cria a conta sem convite vira responsável (dono) de uma empresa nova, que nasce **pendente** até o administrador liberar.
 - O responsável autoriza colaboradores pelo e-mail, na aba Equipe. A pessoa cria a conta com esse e-mail e entra direto na equipe. O sistema não envia e-mail de convite.
-- Permissões por colaborador: ao adicionar alguém (ou depois, no botão Permissões), o responsável marca o que a pessoa pode ver (painel, contatos de toda a equipe ou só os próprios, equipe, dados da empresa) e fazer (cadastrar, editar, excluir, importar planilha, baixar planilha). Toda planilha importada passa pela aprovação da PHAR antes de virar contato. As regras de contatos, equipe, dados da empresa, importar e baixar planilha valem no banco; "painel" só esconde a tela.
+- Permissões por colaborador: ao adicionar alguém (ou depois, no botão Permissões), o responsável marca o que a pessoa pode ver (painel, contatos de toda a equipe ou só os próprios, equipe, dados da empresa) e fazer (cadastrar, editar, excluir, importar planilha, baixar planilha), além da aba Clientes (ver, editar fichas e ver valores). Toda planilha importada passa pela aprovação da PHAR antes de virar contato. As regras de contatos, equipe, dados da empresa, importar e baixar planilha valem no banco; "painel" só esconde a tela.
 - Na aba Empresa, o responsável preenche o cadastro completo (razão social, CNPJ ou CPF, contatos e endereço). A equipe vê; só o responsável altera. O CNPJ e o CPF têm os dígitos conferidos na tela, e o banco confere o formato.
 - Um usuário pertence a uma empresa só.
 

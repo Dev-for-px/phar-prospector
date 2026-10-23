@@ -56,6 +56,7 @@
       <div class="abas-app" role="tablist" aria-label="Áreas do sistema">
         <button class="aba-app" type="button" role="tab" id="aba-painel" data-visao="painel" aria-selected="true" aria-controls="v-painel">Painel</button>
         <button class="aba-app" type="button" role="tab" id="aba-contatos" data-visao="contatos" aria-selected="false" aria-controls="v-contatos">Contatos</button>
+        <button class="aba-app" type="button" role="tab" id="aba-clientes" data-visao="clientes" aria-selected="false" aria-controls="v-clientes" hidden>Clientes</button>
         <button class="aba-app" type="button" role="tab" id="aba-buscar" data-visao="buscar" aria-selected="false" aria-controls="v-buscar" hidden>Buscar leads</button>
         <button class="aba-app" type="button" role="tab" id="aba-equipe" data-visao="equipe" aria-selected="false" aria-controls="v-equipe">Equipe</button>
         <button class="aba-app" type="button" role="tab" id="aba-empresa" data-visao="empresa" aria-selected="false" aria-controls="v-empresa">Empresa</button>
@@ -151,6 +152,41 @@
       </div>
       <div class="lista" id="lista"></div>
       <div class="kanban" id="kanban" hidden></div>
+    </section>
+
+    <!-- Clientes (código em js/clientes.js) -->
+    <section id="v-clientes" role="tabpanel" aria-labelledby="aba-clientes" hidden>
+      <div class="toolbar">
+        <div class="campo busca">
+          <label for="cl-q">Buscar</label>
+          <input type="search" id="cl-q" placeholder="Cliente, pessoa, cidade, o que contratou" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="cl-sit">Situação</label>
+          <select id="cl-sit">
+            <option value="abertos">Ativos e pausados</option>
+            <option value="ativo">Ativos</option>
+            <option value="pausado">Pausados</option>
+            <option value="cancelado">Cancelados</option>
+            <option value="todos">Todos</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="cl-resp">Responsável</label>
+          <select id="cl-resp"><option value="">Todos</option><option value="eu">Meus clientes</option></select>
+        </div>
+        <label class="caixa cl-renova-caixa" for="cl-renova"><input type="checkbox" id="cl-renova"><span>Renovação em até 30 dias</span></label>
+        <button class="btn btn-sec" type="button" id="cl-csv" hidden>Baixar planilha de clientes (CSV)</button>
+      </div>
+      <div class="resumo">
+        <span id="cl-contagem">Carregando os clientes…</span>
+        <span class="dica" id="cl-dica" hidden>Você vê só os clientes que você cadastrou ou dos quais é responsável.</span>
+        <button class="linkbtn" type="button" id="cl-limpar" hidden>Limpar filtros</button>
+      </div>
+      <div class="lista-head" id="cl-head" aria-hidden="true">
+        <span>Cliente</span><span>Renovação e valor</span><span>Situação</span><span>Próxima ação</span><span></span>
+      </div>
+      <div class="lista" id="cl-lista"></div>
     </section>
 
     <!-- Buscar leads (código em js/buscar.js) -->
@@ -476,7 +512,7 @@
         <button class="btn btn-sec" type="button" id="ficha-registrar" hidden>Registrar contato</button>
         <button class="btn btn-danger empurra" type="button" id="ficha-excluir" hidden>Excluir</button>
         <span class="acoes empurra" id="ficha-confirma" hidden>
-          <span>Excluir de vez?</span>
+          <span id="ficha-excluir-txt">Excluir de vez?</span>
           <button class="btn btn-danger" type="button" id="ficha-excluir-sim">Sim, excluir</button>
           <button class="btn btn-sec" type="button" id="ficha-excluir-nao">Manter</button>
         </span>
@@ -499,7 +535,7 @@
         <label class="caixa" for="exc-so-nao"><input type="radio" name="exc-qual" id="exc-so-nao" value="nao-clientes" checked><span id="exc-so-nao-txt">Excluir só os que não são clientes</span></label>
         <label class="caixa" for="exc-todos"><input type="radio" name="exc-qual" id="exc-todos" value="todos"><span id="exc-todos-txt">Excluir todos, inclusive os clientes</span></label>
       </fieldset>
-      <p class="aviso aviso-erro" id="exc-cliente-um" hidden>Este contato é um cliente fechado.</p>
+      <p class="aviso aviso-erro" id="exc-cliente-um" hidden>Este contato é cliente; a ficha de cliente também será excluída.</p>
       <div class="campo" id="exc-digitar" hidden>
         <label for="exc-palavra">Para confirmar, digite EXCLUIR</label>
         <input type="text" id="exc-palavra" autocomplete="off" autocapitalize="characters" spellcheck="false">
@@ -520,6 +556,141 @@
     <button class="fechar" type="button" data-fechar aria-label="Fechar">×</button>
   </div>
   <div class="dlg-body" id="imp-corpo"></div>
+</dialog>
+
+<!-- Ficha de cliente (js/clientes.js) -->
+<dialog id="dlg-cliente" aria-labelledby="cl-titulo">
+  <form id="form-cliente" novalidate>
+    <div class="dlg-head">
+      <div>
+        <p class="dica">Ficha de cliente</p>
+        <h2 id="cl-titulo">—</h2>
+      </div>
+      <button class="fechar" type="button" data-fechar aria-label="Fechar">×</button>
+    </div>
+    <div class="dlg-body">
+      <p class="sub" id="cl-sub"></p>
+      <p class="aviso aviso-info-simples" id="cl-leitura" hidden>Você pode ver esta ficha, mas não alterar. Para editar, o responsável pela conta marca "Editar clientes" para você na aba Equipe.</p>
+      <div class="grid">
+        <div class="campo col-2">
+          <label for="cl-contratou">O que contratou</label>
+          <input type="text" id="cl-contratou" maxlength="200" placeholder="Ex.: consultoria mensal de vendas">
+        </div>
+        <div class="campo">
+          <label for="cl-situacao">Situação</label>
+          <select id="cl-situacao"><option value="ativo">Ativo</option><option value="pausado">Pausado</option><option value="cancelado">Cancelado</option></select>
+        </div>
+        <div class="campo">
+          <label for="cl-desde">Cliente desde</label>
+          <input type="date" id="cl-desde">
+        </div>
+        <div class="campo col-2" id="cl-motivo-campo" hidden>
+          <label for="cl-motivo">Motivo do cancelamento</label>
+          <input type="text" id="cl-motivo" maxlength="300" placeholder="Ex.: fechou a loja">
+        </div>
+        <div class="campo">
+          <label for="cl-inicio">Início do contrato</label>
+          <input type="date" id="cl-inicio">
+        </div>
+        <div class="campo">
+          <label for="cl-renovacao">Renovação ou fim</label>
+          <input type="date" id="cl-renovacao">
+        </div>
+        <fieldset class="campo col-2 cl-fin" id="cl-fin" hidden>
+          <legend>Valores</legend>
+          <div class="grid">
+            <div class="campo">
+              <label for="cl-valor">Valor (R$)</label>
+              <input type="text" id="cl-valor" inputmode="decimal" autocomplete="off" placeholder="R$ 1.234,56">
+            </div>
+            <div class="campo">
+              <label for="cl-tipo">O valor é</label>
+              <select id="cl-tipo"><option value="mensal">Por mês</option><option value="contrato">Do contrato inteiro</option></select>
+            </div>
+            <div class="campo col-2">
+              <label for="cl-cobranca">Forma de cobrança</label>
+              <input type="text" id="cl-cobranca" maxlength="80" list="cl-cobrancas" placeholder="Ex.: Pix todo dia 10">
+              <datalist id="cl-cobrancas"><option value="Pix"><option value="Boleto"><option value="Cartão de crédito"><option value="Transferência"><option value="Dinheiro"></datalist>
+            </div>
+          </div>
+        </fieldset>
+        <div class="campo">
+          <label for="cl-proxima">Próxima ação</label>
+          <input type="date" id="cl-proxima">
+        </div>
+        <div class="campo">
+          <label for="cl-proxima-nota">O que fazer</label>
+          <input type="text" id="cl-proxima-nota" maxlength="200" placeholder="Ex.: enviar relatório do mês">
+        </div>
+        <div class="campo col-2">
+          <label for="cl-obs">Observações</label>
+          <textarea id="cl-obs" maxlength="4000"></textarea>
+        </div>
+      </div>
+      <div class="cl-atend">
+        <div class="cl-atend-topo">
+          <h3>Atendimentos</h3>
+          <button class="btn btn-sec btn-sm" type="button" id="cl-registrar">Registrar atendimento</button>
+        </div>
+        <p class="dica" id="cl-atend-vazio">Nenhum atendimento registrado.</p>
+        <ul class="hist" id="cl-atend-lista"></ul>
+      </div>
+      <p class="erro" id="cl-erro" role="alert" hidden></p>
+      <div class="acoes">
+        <button class="btn btn-primary" type="submit" id="cl-salvar">Salvar ficha</button>
+        <button class="btn btn-sec" type="button" id="cl-abrir-contato">Abrir contato</button>
+        <button class="btn btn-sec" type="button" data-fechar>Fechar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- Registrar atendimento de cliente (js/clientes.js) -->
+<dialog id="dlg-atend" aria-labelledby="at-titulo">
+  <form id="form-atend" novalidate>
+    <div class="dlg-head">
+      <div>
+        <p class="dica">Registrar atendimento</p>
+        <h2 id="at-titulo">—</h2>
+      </div>
+      <button class="fechar" type="button" data-fechar aria-label="Fechar">×</button>
+    </div>
+    <div class="dlg-body">
+      <div class="grid">
+        <div class="campo">
+          <label for="at-data">Quando</label>
+          <input type="date" id="at-data">
+        </div>
+        <fieldset class="campo col-2">
+          <legend>Por onde</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="at-canal" value="Ligação"><span>Ligação</span></label>
+            <label class="chip"><input type="radio" name="at-canal" value="WhatsApp"><span>WhatsApp</span></label>
+            <label class="chip"><input type="radio" name="at-canal" value="E-mail"><span>E-mail</span></label>
+            <label class="chip"><input type="radio" name="at-canal" value="Presencial"><span>Presencial</span></label>
+            <label class="chip"><input type="radio" name="at-canal" value="Outro"><span>Outro</span></label>
+          </div>
+        </fieldset>
+        <div class="campo col-2">
+          <label for="at-nota">O que foi feito</label>
+          <textarea id="at-nota" maxlength="2000" placeholder="Ex.: reunião mensal, entregue o relatório de setembro"></textarea>
+        </div>
+        <div class="campo">
+          <label for="at-proxima">Próxima ação</label>
+          <input type="date" id="at-proxima">
+        </div>
+        <div class="campo">
+          <label for="at-proxima-nota">O que fazer</label>
+          <input type="text" id="at-proxima-nota" maxlength="200">
+        </div>
+      </div>
+      <p class="erro" id="at-erro" role="alert" hidden></p>
+      <div class="acoes">
+        <button class="btn btn-primary" type="submit" id="at-salvar">Salvar atendimento</button>
+        <button class="btn btn-sec" type="button" data-fechar>Cancelar</button>
+      </div>
+    </div>
+  </form>
 </dialog>
 
 <!-- Registrar contato -->
@@ -588,6 +759,7 @@
 <script src="/vendor/parquet.js"></script>
 <script src="/js/buscar.js"></script>
 <script src="/js/importar.js"></script>
+<script src="/js/clientes.js"></script>
 <script src="/js/app.js"></script>
 </body>
 </html>

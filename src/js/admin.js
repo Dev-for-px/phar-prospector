@@ -239,7 +239,12 @@
       var cols = [['Empresa (conta)', null], ['CNPJ ou CPF (conta)', '#doc'], ['Contato: empresa', 'empresa'], ['Pessoa', 'contato'], ['Cargo', 'cargo'], ['Telefone', 'telefone'], ['E-mail', 'email'],
         ['Cidade', 'cidade'], ['UF', 'uf'], ['Segmento', 'segmento'], ['Porte', 'porte'], ['Origem', 'origem'], ['Site ou Instagram', 'link'], ['Interesse', 'interesse'],
         ['Status', 'status'], ['Último contato', 'ultimo_contato'], ['Próximo contato', 'proximo_contato'], ['Observações', 'observacoes'], ['Histórico', 'historico'],
-        ['Cadastrado por', 'cadastrado_por'], ['Responsável', 'responsavel'], ['Cliente desde', 'cliente_desde'], ['Cadastrado em', 'criado_em']];
+        ['Cadastrado por', 'cadastrado_por'], ['Responsável', 'responsavel'], ['Cliente desde', 'cliente_desde'],
+        ['Cliente: situação', 'cliente_situacao'], ['Cliente: o que contratou', 'cliente_contratou'], ['Cliente: início', 'cliente_inicio'],
+        ['Cliente: renovação ou fim', 'cliente_renovacao'], ['Cliente: motivo do cancelamento', 'cliente_motivo_cancelamento'], ['Cliente: valor', 'cliente_valor'],
+        ['Cliente: tipo de valor', 'cliente_tipo_valor'], ['Cliente: forma de cobrança', 'cliente_forma_cobranca'], ['Cliente: próxima ação', 'cliente_proxima_acao'],
+        ['Cliente: o que fazer', 'cliente_proxima_acao_nota'], ['Cliente: observações', 'cliente_observacoes'], ['Cliente: atendimentos', 'cliente_atendimentos'],
+        ['Cadastrado em', 'criado_em']];
       function cel(v) {
         v = String(v == null ? '' : v);
         if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
@@ -253,7 +258,9 @@
             if (!c[1]) return cel(e.nome);
             if (c[1] === '#doc') return cel(PP.docFormatado((e.cadastro || {}).documento));
             var v = x[c[1]];
-            if (c[1] === 'historico') v = (v || []).map(function (h) { return [h.data, h.canal, h.nota].filter(Boolean).join(' - '); }).join(' | ');
+            if (c[1] === 'historico' || c[1] === 'cliente_atendimentos') v = (v || []).map(function (h) { return [h.data, h.canal, h.nota].filter(Boolean).join(' - '); }).join(' | ');
+            else if (c[1] === 'cliente_valor') v = v == null ? '' : Number(v).toFixed(2).replace('.', ',');
+            else if (c[1] === 'cliente_tipo_valor') v = v === 'contrato' ? 'Contrato inteiro' : v === 'mensal' ? 'Mensal' : '';
             return cel(v);
           }).join(';'));
         });

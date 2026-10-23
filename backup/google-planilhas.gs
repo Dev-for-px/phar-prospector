@@ -27,6 +27,10 @@ var COLUNAS = [
   ['Origem', 'origem'], ['Site ou Instagram', 'link'], ['Interesse', 'interesse'], ['Status', 'status'],
   ['Último contato', 'ultimo_contato'], ['Próximo contato', 'proximo_contato'], ['Observações', 'observacoes'],
   ['Histórico', 'historico'], ['Cadastrado por', 'cadastrado_por'], ['Responsável', 'responsavel'], ['Cliente desde', 'cliente_desde'],
+  ['Cliente: situação', 'cliente_situacao'], ['Cliente: o que contratou', 'cliente_contratou'], ['Cliente: início', 'cliente_inicio'],
+  ['Cliente: renovação ou fim', 'cliente_renovacao'], ['Cliente: motivo do cancelamento', 'cliente_motivo_cancelamento'], ['Cliente: valor', 'cliente_valor'],
+  ['Cliente: tipo de valor', 'cliente_tipo_valor'], ['Cliente: forma de cobrança', 'cliente_forma_cobranca'], ['Cliente: próxima ação', 'cliente_proxima_acao'],
+  ['Cliente: o que fazer', 'cliente_proxima_acao_nota'], ['Cliente: observações', 'cliente_observacoes'], ['Cliente: atendimentos', 'cliente_atendimentos'],
   ['Cadastrado em', 'criado_em'], ['Atualizado em', 'atualizado_em']
 ];
 var STATUS = {
@@ -175,6 +179,14 @@ function abaDaEmpresa_(planilha, emp) {
 function celula_(campo, valor) {
   if (valor === null || valor === undefined) return '';
   if (campo === 'status') return STATUS[valor] || valor;
+  if (campo === 'cliente_situacao') return { ativo: 'Ativo', pausado: 'Pausado', cancelado: 'Cancelado' }[valor] || valor;
+  if (campo === 'cliente_tipo_valor') return valor === 'contrato' ? 'Contrato inteiro' : 'Mensal';
+  if (campo === 'cliente_valor') return Number(valor);
+  if (campo === 'cliente_atendimentos') {
+    return texto_((valor || []).map(function (a) {
+      return [a.data, a.canal, a.por, a.nota].filter(function (p) { return p; }).join(' - ');
+    }).join(' | '));
+  }
   if (campo === 'historico') {
     return texto_((valor || []).map(function (h) {
       return [h.data, h.canal, STATUS[h.status] || h.status, h.por, h.nota].filter(function (p) { return p; }).join(' - ');
